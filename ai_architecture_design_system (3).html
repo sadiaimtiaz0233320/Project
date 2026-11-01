@@ -1,0 +1,2588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ArchiTech AI - Intelligent Architectural Design & 3D Visualization System</title>
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        slate: { 850: '#111827', 900: '#0f172a', 950: '#080d1a' },
+                        blueprint: { 50: '#f0f9ff', 400: '#38bdf8', 500: '#0ea5e9', 600: '#0284c7' },
+                        terracotta: { 500: '#d97706', 600: '#b45309' }
+                    },
+                    fontFamily: { sans: ['Inter', 'sans-serif'], mono: ['Fira Code', 'monospace'] }
+                }
+            }
+        }
+    </script>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Three.js + OrbitControls + PointerLockControls + OBJExporter -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/PointerLockControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/OBJExporter.js"></script>
+
+    <!-- Chart.js + GSAP -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #f8fafc; overflow-x: hidden; }
+
+        .blueprint-bg {
+            background-color: #0f172a;
+            background-image:
+                linear-gradient(rgba(56, 189, 248, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(56, 189, 248, 0.05) 1px, transparent 1px);
+            background-size: 30px 30px;
+        }
+        .glass-panel { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); }
+        .glass-card { background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(8px); border: 1px solid rgba(56, 189, 248, 0.15); }
+        .glow-blueprint { box-shadow: 0 0 20px rgba(56, 189, 248, 0.25); }
+
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #38bdf8; }
+
+        /* ArchiBot floating button glow */
+        @keyframes botGlow {
+            0%, 100% { box-shadow: 0 0 16px rgba(56,189,248,.55), 0 0 36px rgba(56,189,248,.25); }
+            50% { box-shadow: 0 0 28px rgba(56,189,248,.95), 0 0 64px rgba(56,189,248,.45); }
+        }
+        .bot-fab { animation: botGlow 2.4s ease-in-out infinite; }
+
+        @keyframes dotBounce { 0%, 80%, 100% { transform: translateY(0); opacity: .4; } 40% { transform: translateY(-4px); opacity: 1; } }
+        .typing-dot { width: 6px; height: 6px; border-radius: 9999px; background: #38bdf8; display: inline-block; animation: dotBounce 1s infinite; }
+        .typing-dot:nth-child(2) { animation-delay: .15s; }
+        .typing-dot:nth-child(3) { animation-delay: .3s; }
+
+        .layer-active { background: rgba(56,189,248,.18) !important; border-color: rgba(56,189,248,.65) !important; color: #fff !important; }
+        .swatch-btn { border-radius: 10px; padding: 4px; border: 1px solid #1e293b; background: #0f172a; text-align: center; transition: all .15s; cursor: pointer; }
+        .swatch-btn:hover { border-color: #38bdf8; }
+        .swatch-btn.active { outline: 2px solid #38bdf8; outline-offset: 1px; }
+
+        input[type=range] { accent-color: #38bdf8; }
+
+
+        /* Splash + gate */
+        .logo-draw path, .logo-draw circle.ld { stroke-dasharray: 1; stroke-dashoffset: 1; animation: logoDraw 1.5s ease forwards; }
+        @keyframes logoDraw { to { stroke-dashoffset: 0; } }
+        .logo-pop { opacity: 0; transform: scale(.6); animation: logoPop .7s cubic-bezier(.2,1.4,.4,1) 1.5s forwards; }
+        @keyframes logoPop { to { opacity: 1; transform: scale(1); } }
+        .splash-word { opacity: 0; transform: translateY(14px); animation: riseIn .8s ease 1.2s forwards; }
+        .splash-tag { opacity: 0; animation: riseIn .8s ease 1.7s forwards; }
+        @keyframes riseIn { to { opacity: 1; transform: translateY(0); } }
+        .splash-scan { position: absolute; left: 0; right: 0; height: 2px; background: #7dd3fc; box-shadow: 0 0 18px 4px rgba(56,189,248,.55); animation: splashScan 2.5s ease-in-out infinite; }
+        @keyframes splashScan { 0% { top: -2%; opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { top: 102%; opacity: 0; } }
+        .logo-glow { filter: drop-shadow(0 0 18px rgba(56,189,248,.45)); }
+        #splash.fade-out { opacity: 0; transition: opacity .6s ease; pointer-events: none; }
+
+        /* Print layout */
+        @media print {
+            @page { size: A4 landscape; margin: 10mm; }
+            body.printing > *:not(#print-layout) { display: none !important; }
+            body.printing { background: #fff !important; }
+            body.printing #print-layout { position: static !important; display: block !important; background: #fff !important; padding: 0 !important; overflow: visible !important; }
+            body.printing .no-print { display: none !important; }
+            body.printing #print-sheet { box-shadow: none !important; max-width: none !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        }
+    </style>
+</head>
+<body class="blueprint-bg min-h-screen text-slate-100 flex flex-col justify-between">
+
+    <!-- ========================================== -->
+    <!-- SPLASH SCREEN + SIGN-IN GATE               -->
+    <!-- ========================================== -->
+    <div id="splash" class="fixed inset-0 z-[100] blueprint-bg flex flex-col items-center justify-center overflow-hidden px-4 text-center">
+        <div class="splash-scan"></div>
+        <div id="splash-logo" class="w-40 h-40 sm:w-52 sm:h-52 logo-glow"></div>
+        <div class="splash-word mt-6 text-4xl sm:text-5xl font-extrabold tracking-tight text-white">ArchiTech <span class="text-transparent bg-clip-text bg-gradient-to-r from-blueprint-400 to-amber-400">AI</span></div>
+        <p class="splash-tag mt-2 text-xs sm:text-sm font-mono tracking-[.3em] text-slate-400 uppercase">Intelligent Architectural Design</p>
+        <div class="mt-10 w-64 h-1 rounded bg-slate-800 overflow-hidden"><div id="splash-bar" class="h-full bg-gradient-to-r from-blueprint-400 to-amber-400" style="width:0"></div></div>
+        <div id="splash-status" class="mt-3 text-[11px] font-mono text-blueprint-400">Initializing blueprint engine...</div>
+        <button type="button" data-sfx="none" onclick="endSplash()" class="absolute bottom-6 right-6 px-3 py-1.5 rounded-lg bg-slate-900/80 border border-slate-700 text-xs text-slate-300 hover:text-white">Skip <i class="fa-solid fa-forward-step ml-1"></i></button>
+    </div>
+
+    <div id="gate" class="hidden fixed inset-0 z-[99] blueprint-bg overflow-auto items-center justify-center p-4">
+        <div class="glass-panel w-full max-w-md rounded-3xl border border-slate-700 p-8 shadow-2xl my-auto">
+            <div class="flex flex-col items-center text-center mb-6">
+                <div id="gate-logo" class="w-24 h-24 logo-glow"></div>
+                <h1 class="mt-3 text-2xl font-extrabold text-white">ArchiTech <span class="text-transparent bg-clip-text bg-gradient-to-r from-blueprint-400 to-amber-400">AI</span></h1>
+                <p class="text-xs text-slate-400 mt-1">Sign in to save designs, manage projects and export packages</p>
+            </div>
+            <div class="flex bg-slate-900 rounded-xl p-1 mb-5 border border-slate-800 text-xs font-semibold">
+                <button type="button" id="gate-tab-login" onclick="gateSwitch('login')" class="flex-1 py-2 rounded-lg bg-blueprint-500 text-slate-950 font-bold">Login</button>
+                <button type="button" id="gate-tab-register" onclick="gateSwitch('register')" class="flex-1 py-2 rounded-lg text-slate-400 hover:text-white">Register</button>
+            </div>
+            <form onsubmit="gateSubmit(event)" class="space-y-4">
+                <div id="gate-name-wrap" class="hidden">
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Full Name / Studio Name</label>
+                    <input type="text" id="gate-name" placeholder="Arch. Alex Wright" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-blueprint-400">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Email Address</label>
+                    <input type="email" id="gate-email" required placeholder="alex@architecture.com" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-blueprint-400">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Password</label>
+                    <input type="password" id="gate-password" required placeholder="••••••••" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-blueprint-400">
+                </div>
+                <button type="submit" id="gate-submit" class="w-full py-3 rounded-xl bg-gradient-to-r from-blueprint-500 to-blue-600 hover:from-blueprint-400 hover:to-blue-500 text-slate-950 font-bold text-sm shadow-lg shadow-blueprint-500/20">Sign In to Studio</button>
+            </form>
+            <div class="flex items-center gap-3 my-4 text-[11px] text-slate-500"><span class="flex-1 h-px bg-slate-800"></span>or<span class="flex-1 h-px bg-slate-800"></span></div>
+            <button type="button" onclick="enterSite()" class="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-sm font-semibold">Continue as Guest <i class="fa-solid fa-arrow-right ml-1"></i></button>
+        </div>
+    </div>
+
+
+    <!-- ========================================== -->
+    <!-- NAVIGATION BAR                             -->
+    <!-- ========================================== -->
+    <header class="sticky top-0 z-40 glass-panel border-b border-slate-800 px-4 lg:px-8 py-3.5">
+        <div class="max-w-7xl mx-auto flex items-center justify-between">
+            <div class="flex items-center space-x-3 cursor-pointer" onclick="navigateTo('home')">
+                <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-blueprint-400 to-blue-600 flex items-center justify-center text-slate-950 font-bold text-xl shadow-lg shadow-blueprint-500/20">
+                    <i class="fa-solid fa-drafting-compass"></i>
+                </div>
+                <div>
+                    <span class="text-xl font-bold tracking-tight text-white flex items-center gap-1.5">
+                        ArchiTech <span class="text-xs bg-blueprint-500/20 text-blueprint-400 border border-blueprint-500/30 px-2 py-0.5 rounded-full uppercase tracking-wider font-mono">AI v3.0</span>
+                    </span>
+                    <p class="text-xs text-slate-400 hidden sm:block">Intelligent Architectural Design Platform</p>
+                </div>
+            </div>
+
+            <nav class="hidden md:flex items-center space-x-1 bg-slate-900/80 p-1.5 rounded-xl border border-slate-800 text-sm font-medium">
+                <button id="nav-home" onclick="navigateTo('home')" class="px-3 py-2 rounded-lg text-slate-300 hover:text-white transition-all duration-200">Home</button>
+                <button id="nav-wizard" onclick="navigateTo('wizard')" class="px-3 py-2 rounded-lg text-slate-300 hover:text-white transition-all duration-200 flex items-center gap-2">
+                    <i class="fa-solid fa-pen-ruler text-xs text-blueprint-400"></i> Requirements
+                </button>
+                <button id="nav-viewer2d" onclick="navigateTo('viewer2d')" class="px-3 py-2 rounded-lg text-slate-300 hover:text-white transition-all duration-200 flex items-center gap-2">
+                    <i class="fa-solid fa-map text-xs text-amber-400"></i> 2D Plan
+                </button>
+                <button id="nav-viewer3d" onclick="navigateTo('viewer3d')" class="px-3 py-2 rounded-lg text-slate-300 hover:text-white transition-all duration-200 flex items-center gap-2">
+                    <i class="fa-solid fa-cube text-xs text-emerald-400"></i> 3D Studio
+                </button>
+                <button id="nav-analytics" onclick="navigateTo('analytics')" class="px-3 py-2 rounded-lg text-slate-300 hover:text-white transition-all duration-200 flex items-center gap-2">
+                    <i class="fa-solid fa-chart-pie text-xs text-purple-400"></i> Analytics
+                </button>
+                <button id="nav-gallery" onclick="navigateTo('gallery')" class="px-3 py-2 rounded-lg text-slate-300 hover:text-white transition-all duration-200 flex items-center gap-2">
+                    <i class="fa-solid fa-layer-group text-xs text-purple-400"></i> Gallery
+                </button>
+                <button id="nav-export" onclick="navigateTo('export')" class="px-3 py-2 rounded-lg text-slate-300 hover:text-white transition-all duration-200 flex items-center gap-2">
+                    <i class="fa-solid fa-download text-xs text-blueprint-400"></i> Export
+                </button>
+            </nav>
+
+            <div class="flex items-center space-x-2">
+                <button id="sound-toggle" data-sfx="none" onclick="toggleSound()" title="Toggle UI sounds" class="w-9 h-9 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 text-slate-300 flex items-center justify-center">
+                    <i id="sound-icon" class="fa-solid fa-volume-high text-sm"></i>
+                </button>
+                <div id="user-profile-btn" onclick="openAuthModal()" class="flex items-center gap-2 bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 px-3.5 py-2 rounded-xl cursor-pointer transition-all">
+                    <div class="w-7 h-7 rounded-full bg-blueprint-500/20 text-blueprint-400 flex items-center justify-center font-bold text-xs border border-blueprint-400/30" id="user-avatar-icon">
+                        <i class="fa-solid fa-user"></i>
+                    </div>
+                    <span id="user-name-display" class="text-sm font-medium text-slate-200">Sign In</span>
+                </div>
+                <button onclick="toggleMobileMenu()" class="md:hidden p-2 text-slate-400 hover:text-white">
+                    <i class="fa-solid fa-bars text-xl"></i>
+                </button>
+            </div>
+        </div>
+
+        <div id="mobile-menu" class="hidden md:hidden mt-3 pt-3 border-t border-slate-800 flex flex-col space-y-2 text-sm">
+            <button onclick="navigateTo('home'); toggleMobileMenu()" class="text-left px-3 py-2 rounded-lg bg-slate-800/50">Home</button>
+            <button onclick="navigateTo('wizard'); toggleMobileMenu()" class="text-left px-3 py-2 rounded-lg bg-slate-800/50">Project Requirements</button>
+            <button onclick="navigateTo('viewer2d'); toggleMobileMenu()" class="text-left px-3 py-2 rounded-lg bg-slate-800/50">2D Floor Plan Viewer</button>
+            <button onclick="navigateTo('viewer3d'); toggleMobileMenu()" class="text-left px-3 py-2 rounded-lg bg-slate-800/50">3D Architectural Studio</button>
+            <button onclick="navigateTo('analytics'); toggleMobileMenu()" class="text-left px-3 py-2 rounded-lg bg-slate-800/50">Cost & Sustainability Analytics</button>
+            <button onclick="navigateTo('gallery'); toggleMobileMenu()" class="text-left px-3 py-2 rounded-lg bg-slate-800/50">Design Comparison Gallery</button>
+            <button onclick="navigateTo('export'); toggleMobileMenu()" class="text-left px-3 py-2 rounded-lg bg-slate-800/50">Download & Export Studio</button>
+        </div>
+    </header>
+
+
+    <!-- ========================================== -->
+    <!-- MAIN APPLICATION VIEW CONTAINER            -->
+    <!-- ========================================== -->
+    <main id="app-container" class="max-w-7xl mx-auto px-4 lg:px-8 py-6 flex-grow w-full">
+
+        <!-- MODULE 1: HOME PAGE -->
+        <section id="module-home" class="space-y-12">
+            <div class="relative rounded-3xl overflow-hidden glass-panel border border-slate-800 p-8 lg:p-14 text-center lg:text-left flex flex-col lg:flex-row items-center justify-between gap-10">
+                <div class="absolute -top-24 -left-24 w-96 h-96 bg-blueprint-500/10 rounded-full blur-3xl pointer-events-none"></div>
+                <div class="absolute -bottom-24 -right-24 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+                <div class="lg:w-1/2 space-y-6 z-10">
+                    <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blueprint-500/10 border border-blueprint-500/30 text-blueprint-400 text-xs font-semibold tracking-wide uppercase">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i> AI Architecture & CAD Engine
+                    </div>
+                    <h1 class="text-4xl lg:text-6xl font-extrabold tracking-tight text-white leading-tight">
+                        Transform Ideas into <span class="text-transparent bg-clip-text bg-gradient-to-r from-blueprint-400 via-sky-300 to-amber-400">Architectural Reality</span>
+                    </h1>
+                    <p class="text-slate-300 text-base lg:text-lg leading-relaxed">
+                        Input plot parameters, architectural preferences, and spatial requirements. Generate 2D CAD floor plans, walk through an interactive 3D model, and see live cost &amp; sustainability analytics.
+                    </p>
+                    <div class="flex flex-wrap items-center justify-center lg:justify-start gap-4 pt-2">
+                        <button onclick="navigateTo('wizard')" class="px-6 py-3.5 rounded-xl bg-gradient-to-r from-blueprint-500 to-blue-600 hover:from-blueprint-400 hover:to-blue-500 text-slate-950 font-bold shadow-lg shadow-blueprint-500/25 flex items-center gap-2 transition-all transform hover:-translate-y-0.5">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i> Launch Design Studio
+                        </button>
+                        <button onclick="navigateTo('gallery')" class="px-6 py-3.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold flex items-center gap-2 transition-all">
+                            <i class="fa-solid fa-compass"></i> Explore Sample Designs
+                        </button>
+                    </div>
+                </div>
+
+                <div class="lg:w-1/2 w-full z-10">
+                    <div class="glass-card rounded-2xl p-4 border border-blueprint-500/30 relative overflow-hidden group">
+                        <div class="flex items-center justify-between pb-3 border-b border-slate-800 text-xs text-slate-400">
+                            <span class="font-mono flex items-center gap-1.5"><i class="fa-solid fa-circle text-emerald-400 text-[8px]"></i> LIVE PREVIEW: LUXURY VILLA</span>
+                            <span class="font-mono">34' x 50' • 2,400 SQ FT</span>
+                        </div>
+                        <div class="relative h-64 lg:h-80 my-3 rounded-lg overflow-hidden bg-slate-950 flex items-center justify-center border border-slate-800">
+                            <img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1000&q=80" alt="Architectural Render" class="w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform duration-700" />
+                            <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent"></div>
+                            <div class="absolute bottom-4 left-4 right-4 flex justify-between items-end">
+                                <div>
+                                    <span class="text-xs font-mono text-blueprint-400">MODERN MINIMALIST</span>
+                                    <h3 class="text-lg font-bold text-white">The Horizon Villa Concept</h3>
+                                </div>
+                                <button onclick="navigateTo('viewer3d')" class="px-3 py-1.5 rounded-lg bg-blueprint-500/20 hover:bg-blueprint-500/30 text-blueprint-300 text-xs border border-blueprint-400/30 flex items-center gap-1">
+                                    Interactive 3D <i class="fa-solid fa-arrow-right"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="space-y-6">
+                <div class="text-center max-w-2xl mx-auto">
+                    <h2 class="text-2xl lg:text-3xl font-bold text-white">Integrated Architectural Modules</h2>
+                    <p class="text-slate-400 text-sm mt-2">End-to-end design generation platform from parameter entry to compliance and rendering.</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div class="glass-panel p-6 rounded-2xl border border-slate-800 hover:border-blueprint-500/40 transition-all hover:-translate-y-1">
+                        <div class="w-12 h-12 rounded-xl bg-blueprint-500/10 border border-blueprint-500/30 flex items-center justify-center text-blueprint-400 text-xl mb-4"><i class="fa-solid fa-sliders"></i></div>
+                        <h3 class="text-lg font-bold text-white mb-2">Requirement Engine</h3>
+                        <p class="text-sm text-slate-400">Configure plot dimensions, room specs, architectural style, and budget constraints with precision.</p>
+                    </div>
+                    <div class="glass-panel p-6 rounded-2xl border border-slate-800 hover:border-blueprint-500/40 transition-all hover:-translate-y-1">
+                        <div class="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 text-xl mb-4"><i class="fa-solid fa-map font-bold"></i></div>
+                        <h3 class="text-lg font-bold text-white mb-2">2D Floor Plan CAD</h3>
+                        <p class="text-sm text-slate-400">Drag-resize rooms, toggle electrical &amp; plumbing layers, and export PNG / SVG / print sheets.</p>
+                    </div>
+                    <div class="glass-panel p-6 rounded-2xl border border-slate-800 hover:border-blueprint-500/40 transition-all hover:-translate-y-1">
+                        <div class="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 text-xl mb-4"><i class="fa-solid fa-cube"></i></div>
+                        <h3 class="text-lg font-bold text-white mb-2">3D Solar & Spatial Studio</h3>
+                        <p class="text-sm text-slate-400">Materials, floor cut-sections, first-person walkthrough, and drag &amp; drop furniture in real time.</p>
+                    </div>
+                    <div class="glass-panel p-6 rounded-2xl border border-slate-800 hover:border-blueprint-500/40 transition-all hover:-translate-y-1">
+                        <div class="w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400 text-xl mb-4"><i class="fa-solid fa-chart-pie"></i></div>
+                        <h3 class="text-lg font-bold text-white mb-2">BOQ & Sustainability</h3>
+                        <p class="text-sm text-slate-400">Live bill of quantities, budget pie chart, solar heat gain, ventilation and rooftop solar estimates.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 p-6 glass-panel rounded-2xl border border-slate-800 text-center">
+                <div><div class="text-3xl font-extrabold text-blueprint-400 font-mono">15,000+</div><div class="text-xs text-slate-400 uppercase tracking-wider mt-1">Blueprints Synthesized</div></div>
+                <div><div class="text-3xl font-extrabold text-amber-400 font-mono">&lt; 10 sec</div><div class="text-xs text-slate-400 uppercase tracking-wider mt-1">Average Gen Speed</div></div>
+                <div><div class="text-3xl font-extrabold text-emerald-400 font-mono">99.4%</div><div class="text-xs text-slate-400 uppercase tracking-wider mt-1">Plot Area Efficiency</div></div>
+                <div><div class="text-3xl font-extrabold text-purple-400 font-mono">6 Styles</div><div class="text-xs text-slate-400 uppercase tracking-wider mt-1">Architectural Themes</div></div>
+            </div>
+        </section>
+
+
+        <!-- MODULE 3: PROJECT REQUIREMENTS FORM -->
+        <section id="module-wizard" class="hidden space-y-8">
+            <div class="border-b border-slate-800 pb-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <h2 class="text-2xl font-bold text-white flex items-center gap-2"><i class="fa-solid fa-sliders text-blueprint-400"></i> Project Specification Wizard</h2>
+                    <p class="text-sm text-slate-400">Configure plot constraints, functional spaces, and design style.</p>
+                </div>
+                <div class="flex items-center gap-2 text-xs font-mono bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-800">
+                    <span class="text-slate-400">CALCULATED PLOT AREA:</span>
+                    <span id="calculated-area" class="text-amber-400 font-bold">1,800 Sq Ft</span>
+                </div>
+            </div>
+
+            <form id="requirements-form" onsubmit="triggerAiGeneration(event)" class="space-y-8">
+                <div class="glass-panel p-6 rounded-2xl border border-slate-800 space-y-4">
+                    <h3 class="text-sm font-semibold uppercase tracking-wider text-blueprint-400 flex items-center gap-2">
+                        <span class="w-6 h-6 rounded-full bg-blueprint-500/20 text-blueprint-400 text-xs flex items-center justify-center">1</span> Plot Dimensions & Location
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-300 mb-1">Plot Length (ft) <span class="text-slate-500">(vertical side of plan)</span></label>
+                            <input type="number" id="plot-length" value="30" min="10" max="300" oninput="updatePlotCalculations()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-blueprint-400">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-300 mb-1">Plot Width (ft) <span class="text-slate-500">(horizontal side of plan)</span></label>
+                            <input type="number" id="plot-width" value="60" min="10" max="300" oninput="updatePlotCalculations()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-blueprint-400">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-300 mb-1">Location / Orientation</label>
+                            <select id="plot-orientation" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-blueprint-400">
+                                <option value="North Facing">North Facing Plot</option>
+                                <option value="East Facing">East Facing (Morning Sun)</option>
+                                <option value="South Facing">South Facing Plot</option>
+                                <option value="West Facing">West Facing Plot</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-panel p-6 rounded-2xl border border-slate-800 space-y-4">
+                    <h3 class="text-sm font-semibold uppercase tracking-wider text-blueprint-400 flex items-center gap-2">
+                        <span class="w-6 h-6 rounded-full bg-blueprint-500/20 text-blueprint-400 text-xs flex items-center justify-center">2</span> Building Topology & Room Matrix
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pb-2">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-300 mb-1">Building Category</label>
+                            <select id="building-type" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-blueprint-400">
+                                <option value="Residential House">Residential House / Villa</option>
+                                <option value="Commercial Office">Commercial Office Hub</option>
+                                <option value="Retail Hub">Retail & Boutique Center</option>
+                                <option value="Apartment Complex">Apartment / Flat Suite</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-300 mb-1">Number of Floors</label>
+                            <select id="floors-count" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-blueprint-400">
+                                <option value="1">Single Floor (G)</option>
+                                <option value="2" selected>Double Floor (G + 1)</option>
+                                <option value="3">Triple Floor (G + 2)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-2">
+                        <div class="bg-slate-900/80 p-3 rounded-xl border border-slate-800 flex items-center justify-between">
+                            <span class="text-xs text-slate-300">Bedrooms</span>
+                            <div class="flex items-center gap-2">
+                                <button type="button" onclick="adjustCount('count-bed', -1)" class="w-6 h-6 rounded bg-slate-800 hover:bg-slate-700 text-xs text-white">-</button>
+                                <span id="count-bed" class="font-mono text-sm font-bold text-blueprint-400">3</span>
+                                <button type="button" onclick="adjustCount('count-bed', 1)" class="w-6 h-6 rounded bg-slate-800 hover:bg-slate-700 text-xs text-white">+</button>
+                            </div>
+                        </div>
+                        <div class="bg-slate-900/80 p-3 rounded-xl border border-slate-800 flex items-center justify-between">
+                            <span class="text-xs text-slate-300">Bathrooms</span>
+                            <div class="flex items-center gap-2">
+                                <button type="button" onclick="adjustCount('count-bath', -1)" class="w-6 h-6 rounded bg-slate-800 hover:bg-slate-700 text-xs text-white">-</button>
+                                <span id="count-bath" class="font-mono text-sm font-bold text-blueprint-400">2</span>
+                                <button type="button" onclick="adjustCount('count-bath', 1)" class="w-6 h-6 rounded bg-slate-800 hover:bg-slate-700 text-xs text-white">+</button>
+                            </div>
+                        </div>
+                        <div class="bg-slate-900/80 p-3 rounded-xl border border-slate-800 flex items-center justify-between">
+                            <span class="text-xs text-slate-300">Living Halls</span>
+                            <div class="flex items-center gap-2">
+                                <button type="button" onclick="adjustCount('count-living', -1)" class="w-6 h-6 rounded bg-slate-800 hover:bg-slate-700 text-xs text-white">-</button>
+                                <span id="count-living" class="font-mono text-sm font-bold text-blueprint-400">1</span>
+                                <button type="button" onclick="adjustCount('count-living', 1)" class="w-6 h-6 rounded bg-slate-800 hover:bg-slate-700 text-xs text-white">+</button>
+                            </div>
+                        </div>
+                        <div class="bg-slate-900/80 p-3 rounded-xl border border-slate-800 flex items-center justify-between">
+                            <span class="text-xs text-slate-300">Garages</span>
+                            <div class="flex items-center gap-2">
+                                <button type="button" onclick="adjustCount('count-garage', -1)" class="w-6 h-6 rounded bg-slate-800 hover:bg-slate-700 text-xs text-white">-</button>
+                                <span id="count-garage" class="font-mono text-sm font-bold text-blueprint-400">1</span>
+                                <button type="button" onclick="adjustCount('count-garage', 1)" class="w-6 h-6 rounded bg-slate-800 hover:bg-slate-700 text-xs text-white">+</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-panel p-6 rounded-2xl border border-slate-800 space-y-4">
+                    <h3 class="text-sm font-semibold uppercase tracking-wider text-blueprint-400 flex items-center gap-2">
+                        <span class="w-6 h-6 rounded-full bg-blueprint-500/20 text-blueprint-400 text-xs flex items-center justify-center">3</span> Architectural Style & Budget
+                    </h3>
+
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        <label class="cursor-pointer">
+                            <input type="radio" name="arch-style" value="Modern Minimalist" checked class="peer hidden">
+                            <div class="p-3.5 rounded-xl bg-slate-900 border border-slate-800 peer-checked:border-blueprint-400 peer-checked:bg-blueprint-500/10 transition-all text-center">
+                                <i class="fa-solid fa-vector-square text-blueprint-400 text-lg mb-1 block"></i>
+                                <span class="text-xs font-bold block text-white">Modern Minimalist</span>
+                                <span class="text-[10px] text-slate-400">Clean lines & Glass</span>
+                            </div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="arch-style" value="Contemporary Villa" class="peer hidden">
+                            <div class="p-3.5 rounded-xl bg-slate-900 border border-slate-800 peer-checked:border-blueprint-400 peer-checked:bg-blueprint-500/10 transition-all text-center">
+                                <i class="fa-solid fa-building text-amber-400 text-lg mb-1 block"></i>
+                                <span class="text-xs font-bold block text-white">Contemporary</span>
+                                <span class="text-[10px] text-slate-400">Asymmetric geometry</span>
+                            </div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="arch-style" value="Neo-Classical" class="peer hidden">
+                            <div class="p-3.5 rounded-xl bg-slate-900 border border-slate-800 peer-checked:border-blueprint-400 peer-checked:bg-blueprint-500/10 transition-all text-center">
+                                <i class="fa-solid fa-monument text-emerald-400 text-lg mb-1 block"></i>
+                                <span class="text-xs font-bold block text-white">Neo-Classical</span>
+                                <span class="text-[10px] text-slate-400">Pillars & Symmetry (gable roof)</span>
+                            </div>
+                        </label>
+                    </div>
+
+                    <div class="pt-2">
+                        <div class="flex justify-between text-xs mb-1">
+                            <span class="text-slate-300">Estimated Target Budget ($ USD)</span>
+                            <span id="budget-value" class="text-blueprint-400 font-mono font-bold">$120,000</span>
+                        </div>
+                        <input type="range" id="budget-range" min="30000" max="500000" step="5000" value="120000" oninput="setBudget(this.value)" class="w-full bg-slate-900 cursor-pointer">
+                    </div>
+                </div>
+
+                <div class="flex justify-end">
+                    <button type="submit" data-sfx="generate" class="px-8 py-4 rounded-xl bg-gradient-to-r from-blueprint-500 to-blue-600 hover:from-blueprint-400 hover:to-blue-500 text-slate-950 font-extrabold text-base shadow-xl shadow-blueprint-500/20 flex items-center gap-3 transition-all transform hover:-translate-y-0.5">
+                        <i class="fa-solid fa-wand-magic-sparkles text-lg"></i> Synthesize AI Architectural Design
+                    </button>
+                </div>
+            </form>
+        </section>
+
+
+        <!-- MODULE 4: AI GENERATION LOADER -->
+        <section id="module-generating" class="hidden my-12 max-w-xl mx-auto">
+            <div class="glass-panel p-8 rounded-3xl border border-blueprint-500/30 text-center space-y-6 relative overflow-hidden">
+                <div class="w-full bg-blueprint-400/10 h-1 absolute top-0 left-0">
+                    <div id="gen-progress-bar" class="bg-blueprint-400 h-full w-0 transition-all duration-300"></div>
+                </div>
+                <div class="w-20 h-20 rounded-2xl bg-blueprint-500/10 border border-blueprint-500/30 text-blueprint-400 flex items-center justify-center text-3xl mx-auto glow-blueprint relative">
+                    <i class="fa-solid fa-microchip animate-pulse"></i>
+                </div>
+                <div class="space-y-2">
+                    <h3 class="text-xl font-bold text-white">Synthesizing AI Blueprint & Mesh</h3>
+                    <p id="gen-status-text" class="text-xs font-mono text-blueprint-400">Initializing spatial algorithm...</p>
+                </div>
+                <div class="space-y-2 text-left bg-slate-950/60 p-4 rounded-xl border border-slate-800 text-xs font-mono">
+                    <div id="step-1" class="text-slate-500 flex items-center gap-2"><i class="fa-regular fa-circle"></i> Analyzing plot boundary constraints</div>
+                    <div id="step-2" class="text-slate-500 flex items-center gap-2"><i class="fa-regular fa-circle"></i> Computing room zoning & circulation layout</div>
+                    <div id="step-3" class="text-slate-500 flex items-center gap-2"><i class="fa-regular fa-circle"></i> Rendering vector 2D floor blueprint</div>
+                    <div id="step-4" class="text-slate-500 flex items-center gap-2"><i class="fa-regular fa-circle"></i> Generating 3D exterior mesh & lighting</div>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- MODULE 5: INTERACTIVE 2D FLOOR PLAN VIEWER -->
+        <section id="module-viewer2d" class="hidden space-y-6">
+            <div class="flex flex-col gap-4 border-b border-slate-800 pb-4">
+                <div>
+                    <h2 class="text-2xl font-bold text-white flex items-center gap-2"><i class="fa-solid fa-map text-amber-400"></i> Interactive 2D Blueprint Viewer</h2>
+                    <p class="text-sm text-slate-400">Drag the corner handles to resize rooms, drag a room to move it, drag empty space to pan. Dimensions update live.</p>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-2">
+                    <button id="btn-layer-furniture" onclick="toggleCanvasLayer('furniture')" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-300 border border-slate-700 flex items-center gap-1.5">
+                        <i class="fa-solid fa-couch text-blueprint-400"></i> Furniture
+                    </button>
+                    <button id="btn-layer-dimensions" onclick="toggleCanvasLayer('dimensions')" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-300 border border-slate-700 flex items-center gap-1.5">
+                        <i class="fa-solid fa-ruler-combined text-amber-400"></i> Dimensions
+                    </button>
+                    <button id="btn-layer-electrical" onclick="toggleCanvasLayer('electrical')" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-300 border border-slate-700 flex items-center gap-1.5">
+                        <i class="fa-solid fa-bolt text-yellow-400"></i> Electrical &amp; Switch Plan
+                    </button>
+                    <button id="btn-layer-plumbing" onclick="toggleCanvasLayer('plumbing')" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-300 border border-slate-700 flex items-center gap-1.5">
+                        <i class="fa-solid fa-faucet-drip text-sky-400"></i> Plumbing Lines
+                    </button>
+                    <span class="w-px h-6 bg-slate-700 mx-1 hidden sm:block"></span>
+                    <button onclick="zoomCanvas(1.15)" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-white border border-slate-700" title="Zoom in"><i class="fa-solid fa-magnifying-glass-plus"></i></button>
+                    <button onclick="zoomCanvas(0.87)" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-white border border-slate-700" title="Zoom out"><i class="fa-solid fa-magnifying-glass-minus"></i></button>
+                    <button onclick="resetPlan()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-300 border border-slate-700 flex items-center gap-1.5"><i class="fa-solid fa-rotate-left"></i> Reset Layout</button>
+                    <span class="w-px h-6 bg-slate-700 mx-1 hidden sm:block"></span>
+                    <button data-sfx="download" onclick="downloadBlueprintPNG()" class="px-3.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-md shadow-amber-500/20"><i class="fa-solid fa-file-image"></i> PNG</button>
+                    <button data-sfx="download" onclick="downloadBlueprintSVG()" class="px-3.5 py-1.5 rounded-lg bg-blueprint-500 hover:bg-blueprint-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-md shadow-blueprint-500/20"><i class="fa-solid fa-vector-square"></i> SVG (CAD Vector)</button>
+                    <button data-sfx="none" onclick="openPrintLayout()" class="px-3.5 py-1.5 rounded-lg bg-slate-100 hover:bg-white text-slate-900 font-bold text-xs flex items-center gap-1.5"><i class="fa-solid fa-print"></i> Print Layout</button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                <div class="lg:col-span-3 glass-panel rounded-2xl p-4 border border-slate-800 relative overflow-hidden flex items-center justify-center min-h-[500px]">
+                    <canvas id="blueprint-canvas" width="800" height="520" style="touch-action:none" class="rounded-xl border border-slate-800 bg-slate-950 cursor-crosshair shadow-2xl w-full h-auto"></canvas>
+                </div>
+
+                <div class="glass-panel rounded-2xl p-5 border border-slate-800 space-y-4">
+                    <h3 class="text-sm font-bold uppercase tracking-wider text-amber-400 flex items-center gap-2"><i class="fa-solid fa-circle-info"></i> Room Inspector</h3>
+                    <div id="room-inspector-content" class="space-y-3 text-xs">
+                        <p class="text-slate-400" id="insp-hint">Click a room to inspect it. Drag a corner handle to resize, or drag the room body to move it.</p>
+                        <div class="p-3 bg-slate-900/90 rounded-xl border border-slate-800 space-y-2">
+                            <div class="text-slate-300 font-bold text-sm" id="insp-room-title">No room selected</div>
+                            <div class="flex justify-between text-slate-400"><span>Dimensions:</span><span class="font-mono text-slate-200" id="insp-room-dim">—</span></div>
+                            <div class="flex justify-between text-slate-400"><span>Area:</span><span class="font-mono text-amber-400 font-bold" id="insp-room-area">—</span></div>
+                            <div class="flex justify-between text-slate-400"><span>Flooring:</span><span class="text-slate-200" id="insp-room-floor">—</span></div>
+                        </div>
+                        <div class="p-3 bg-slate-900/90 rounded-xl border border-slate-800 space-y-2">
+                            <div class="text-slate-300 font-semibold">Plan Summary</div>
+                            <div class="flex justify-between text-slate-400"><span>Plot:</span><span class="font-mono text-slate-200" id="insp-plot">—</span></div>
+                            <div class="flex justify-between text-slate-400"><span>Planned room area:</span><span class="font-mono text-slate-200" id="insp-total">—</span></div>
+                            <div class="flex justify-between text-slate-400"><span>Plot coverage:</span><span class="font-mono text-emerald-400" id="insp-cover">—</span></div>
+                        </div>
+                        <div class="text-[11px] text-slate-500 leading-relaxed">
+                            Tip: switch on <span class="text-yellow-400">Electrical</span> or <span class="text-sky-400">Plumbing</span> to see symbols follow your resized rooms. Exports (PNG / SVG / Print) include the layers currently visible.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- MODULE 6: INTERACTIVE 3D ARCHITECTURAL VIEWER -->
+        <section id="module-viewer3d" class="hidden space-y-6">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+                <div>
+                    <h2 class="text-2xl font-bold text-white flex items-center gap-2"><i class="fa-solid fa-cube text-emerald-400"></i> Interactive 3D Architectural Studio</h2>
+                    <p class="text-sm text-slate-400">Customize materials, slice floors, walk inside and arrange furniture. (3D uses a fixed demo layout; floors &amp; style follow your wizard inputs.)</p>
+                </div>
+                <div class="flex flex-wrap items-center gap-2">
+                    <button onclick="setCameraPreset('iso')" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-300 border border-slate-700">Isometric</button>
+                    <button onclick="setCameraPreset('front')" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-300 border border-slate-700">Front</button>
+                    <button onclick="setCameraPreset('top')" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-300 border border-slate-700">Top-Down</button>
+                    <button onclick="toggleRoofVisibility()" class="px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-bold text-xs flex items-center gap-1.5">
+                        <i class="fa-solid fa-house-chimney-window text-emerald-400"></i> Toggle Roof
+                    </button>
+                    <button onclick="startWalkthrough()" class="px-3.5 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center gap-1.5">
+                        <i class="fa-solid fa-person-walking"></i> Walkthrough (WASD)
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                <div class="lg:col-span-3 glass-panel rounded-2xl p-2 border border-slate-800 relative overflow-hidden h-[560px]">
+                    <div id="three-canvas-container" class="w-full h-full rounded-xl overflow-hidden bg-slate-950 relative">
+                        <div id="orbit-hint" class="absolute bottom-4 left-4 z-10 text-[10px] font-mono text-slate-400 bg-slate-900/80 px-2.5 py-1 rounded-md border border-slate-800">
+                            Orbit: Left Drag | Pan: Right Drag | Zoom: Scroll | Furniture: drag to move, R to rotate
+                        </div>
+                        <!-- Walkthrough HUD -->
+                        <div id="walk-hud" class="hidden absolute inset-0 z-20 pointer-events-none">
+                            <div class="absolute top-1/2 left-1/2 w-5 h-5 -translate-x-1/2 -translate-y-1/2 opacity-70">
+                                <div class="absolute left-1/2 top-0 w-px h-full bg-white"></div>
+                                <div class="absolute top-1/2 left-0 h-px w-full bg-white"></div>
+                            </div>
+                            <div class="absolute top-4 left-1/2 -translate-x-1/2 text-xs font-mono bg-slate-950/80 border border-emerald-500/40 text-emerald-300 px-4 py-2 rounded-lg">
+                                <i class="fa-solid fa-person-walking mr-1"></i> W A S D to walk · Mouse to look · ESC to exit
+                                <span id="walk-fallback" class="hidden text-amber-300"> · (pointer lock blocked: drag mouse to look)</span>
+                            </div>
+                            <button onclick="exitWalkthrough()" class="pointer-events-auto absolute top-4 right-4 px-3 py-1.5 rounded-lg bg-slate-900/90 border border-slate-600 text-xs text-white hover:bg-slate-800">Exit Walkthrough</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-panel rounded-2xl p-5 border border-slate-800 space-y-5 max-h-[560px] overflow-y-auto">
+                    <div class="space-y-2">
+                        <h3 class="text-sm font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-2"><i class="fa-solid fa-sun"></i> Solar Study</h3>
+                        <div class="flex justify-between text-xs">
+                            <span class="text-slate-300">Time of Day</span>
+                            <span id="solar-time-label" class="text-emerald-400 font-mono font-bold">12:00 PM</span>
+                        </div>
+                        <input type="range" id="solar-slider" min="6" max="20" step="0.5" value="12" oninput="updateSolarAngle(this.value)" class="w-full bg-slate-900 cursor-pointer">
+                    </div>
+
+                    <div class="border-t border-slate-800 pt-4 space-y-2">
+                        <h3 class="text-sm font-bold uppercase tracking-wider text-sky-400 flex items-center gap-2"><i class="fa-solid fa-scissors"></i> Floor Cut-Section</h3>
+                        <div class="flex justify-between text-xs">
+                            <span class="text-slate-300">Slice height</span>
+                            <span id="slice-label" class="text-sky-400 font-mono font-bold">Full Building</span>
+                        </div>
+                        <input type="range" id="slice-slider" min="0.5" max="20" step="0.1" value="20" oninput="setSlice(this.value)" class="w-full bg-slate-900 cursor-pointer">
+                        <div class="flex gap-2">
+                            <button onclick="setSlicePreset('plan')" class="flex-1 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-[11px] text-slate-200">Plan cut (3.5 ft)</button>
+                            <button onclick="setSlicePreset('full')" class="flex-1 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-[11px] text-slate-200">Show all</button>
+                        </div>
+                        <label class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer pt-1">
+                            <input type="checkbox" id="labels-toggle" checked onchange="toggleLabels(this.checked)" class="accent-sky-400"> Room labels
+                        </label>
+                    </div>
+
+                    <div class="border-t border-slate-800 pt-4 space-y-3">
+                        <h3 class="text-sm font-bold uppercase tracking-wider text-amber-400 flex items-center gap-2"><i class="fa-solid fa-paint-roller"></i> Materials</h3>
+                        <div>
+                            <div class="text-[11px] text-slate-400 mb-1.5">Wall texture</div>
+                            <div id="wall-palette" class="grid grid-cols-3 gap-2"></div>
+                        </div>
+                        <div>
+                            <div class="text-[11px] text-slate-400 mb-1.5">Flooring</div>
+                            <div id="floor-palette" class="grid grid-cols-3 gap-2"></div>
+                        </div>
+                    </div>
+
+                    <div class="border-t border-slate-800 pt-4 space-y-3">
+                        <h3 class="text-sm font-bold uppercase tracking-wider text-purple-400 flex items-center gap-2"><i class="fa-solid fa-couch"></i> Furniture</h3>
+                        <div id="furn-buttons" class="grid grid-cols-2 gap-2"></div>
+                        <div class="flex gap-2">
+                            <button id="furn-edit-btn" onclick="toggleFurnEdit()" class="flex-1 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-[11px] text-slate-200">Drag mode: ON</button>
+                            <button onclick="rotateSelectedFurniture()" class="py-1.5 px-3 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-[11px] text-slate-200" title="Rotate selected (R)"><i class="fa-solid fa-rotate-right"></i></button>
+                            <button onclick="resetFurniture()" class="py-1.5 px-3 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-[11px] text-slate-200" title="Remove all"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                        <p class="text-[10px] text-slate-500">Click a button to add/remove a piece. Drag it on the ground floor to reposition.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- MODULE 9: ANALYTICS -->
+        <section id="module-analytics" class="hidden space-y-6">
+            <div class="border-b border-slate-800 pb-4 flex flex-col md:flex-row md:items-end justify-between gap-4">
+                <div>
+                    <h2 class="text-2xl font-bold text-white flex items-center gap-2"><i class="fa-solid fa-chart-pie text-purple-400"></i> Cost, BOQ & Sustainability Analytics</h2>
+                    <p class="text-sm text-slate-400">Everything recalculates live from your budget, plot, floors, style and orientation.</p>
+                </div>
+                <div class="glass-panel rounded-xl px-4 py-3 border border-slate-800 w-full md:w-96">
+                    <div class="flex justify-between text-xs mb-1">
+                        <span class="text-slate-300">Project Budget</span>
+                        <span id="an-budget-label" class="text-blueprint-400 font-mono font-bold">$120,000</span>
+                    </div>
+                    <input type="range" id="an-budget" min="30000" max="500000" step="5000" value="120000" oninput="setBudget(this.value)" class="w-full bg-slate-900 cursor-pointer">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="kpi-row"></div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+                <div class="lg:col-span-3 glass-panel rounded-2xl p-5 border border-slate-800 space-y-3">
+                    <h3 class="text-sm font-bold uppercase tracking-wider text-blueprint-400 flex items-center gap-2"><i class="fa-solid fa-table-list"></i> Bill of Quantities (Indicative)</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-xs text-left border-collapse">
+                            <thead>
+                                <tr class="text-slate-400 font-mono border-b border-slate-800">
+                                    <th class="p-2">ITEM</th><th class="p-2 text-right">QUANTITY</th><th class="p-2">UNIT</th><th class="p-2 text-right">EST. COST</th>
+                                </tr>
+                            </thead>
+                            <tbody id="boq-body" class="divide-y divide-slate-800/60 font-mono text-slate-200"></tbody>
+                        </table>
+                    </div>
+                    <p class="text-[11px] text-slate-500 leading-relaxed">Quantities are rule-of-thumb estimates derived from built-up area (assumes ~60% plot coverage). They are for early budgeting only, not a substitute for a structural engineer's or quantity surveyor's BOQ.</p>
+                </div>
+
+                <div class="lg:col-span-2 glass-panel rounded-2xl p-5 border border-slate-800 space-y-3">
+                    <h3 class="text-sm font-bold uppercase tracking-wider text-amber-400 flex items-center gap-2"><i class="fa-solid fa-chart-pie"></i> Budget Allocation</h3>
+                    <div class="relative h-72"><canvas id="budget-pie"></canvas></div>
+                    <p id="pie-fallback" class="hidden text-xs text-amber-300">Chart.js could not be loaded (offline?). Allocation is still shown in the KPI cards.</p>
+                    <div id="pie-legend" class="grid grid-cols-2 gap-2 text-[11px]"></div>
+                </div>
+            </div>
+
+            <div class="space-y-3">
+                <h3 class="text-sm font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-2"><i class="fa-solid fa-leaf"></i> Environmental & Sustainability Score Card <span id="eco-orient" class="ml-2 text-[11px] font-mono text-slate-400 normal-case"></span></h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="eco-cards"></div>
+                <p class="text-[11px] text-slate-500 leading-relaxed">Scores are AI-style heuristic estimates for a northern-hemisphere site (e.g. Pakistan / India): they combine plot-facing direction, glazing ratio of the selected style and roof area. Use them to compare options, then confirm with a proper energy simulation.</p>
+            </div>
+        </section>
+
+
+        <!-- MODULE 7: GALLERY -->
+        <section id="module-gallery" class="hidden space-y-6">
+            <div class="border-b border-slate-800 pb-4">
+                <h2 class="text-2xl font-bold text-white flex items-center gap-2"><i class="fa-solid fa-layer-group text-purple-400"></i> AI Generated Gallery & Comparison</h2>
+                <p class="text-sm text-slate-400">Compare architectural style variations synthesized for your plot specifications.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="glass-panel rounded-2xl p-5 border border-slate-800 space-y-4 hover:border-blueprint-500/40 transition-all">
+                    <div class="h-44 rounded-xl overflow-hidden bg-slate-900 relative">
+                        <img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=600&q=80" alt="Option A" class="w-full h-full object-cover">
+                        <span class="absolute top-3 left-3 px-2 py-1 bg-blueprint-500/90 text-slate-950 font-bold text-[10px] rounded uppercase">Option A</span>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-white">Modern Minimalist Concept</h3>
+                        <p class="text-xs text-slate-400 mt-1">Focus on cantilevered planes, full-height double glazing, and natural ventilation slots.</p>
+                    </div>
+                    <div class="text-xs space-y-1.5 pt-2 font-mono text-slate-300 border-t border-slate-800">
+                        <div class="flex justify-between"><span>Plot Utilization:</span><span class="text-blueprint-400">88%</span></div>
+                        <div class="flex justify-between"><span>Est. Construction Cost:</span><span class="text-white">$125,000</span></div>
+                        <div class="flex justify-between"><span>Energy Rating:</span><span class="text-emerald-400">A+ NetZero</span></div>
+                    </div>
+                    <button onclick="openComparisonModal('Option A')" class="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-white border border-slate-700">Compare Specs</button>
+                </div>
+
+                <div class="glass-panel rounded-2xl p-5 border border-slate-800 space-y-4 hover:border-amber-500/40 transition-all">
+                    <div class="h-44 rounded-xl overflow-hidden bg-slate-900 relative">
+                        <img src="https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=600&q=80" alt="Option B" class="w-full h-full object-cover">
+                        <span class="absolute top-3 left-3 px-2 py-1 bg-amber-500/90 text-slate-950 font-bold text-[10px] rounded uppercase">Option B</span>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-white">Contemporary Urban Villa</h3>
+                        <p class="text-xs text-slate-400 mt-1">Incorporates warm timber accents, open central patio, and solar roof overhangs.</p>
+                    </div>
+                    <div class="text-xs space-y-1.5 pt-2 font-mono text-slate-300 border-t border-slate-800">
+                        <div class="flex justify-between"><span>Plot Utilization:</span><span class="text-amber-400">92%</span></div>
+                        <div class="flex justify-between"><span>Est. Construction Cost:</span><span class="text-white">$140,000</span></div>
+                        <div class="flex justify-between"><span>Energy Rating:</span><span class="text-emerald-400">A Passivhaus</span></div>
+                    </div>
+                    <button onclick="openComparisonModal('Option B')" class="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-white border border-slate-700">Compare Specs</button>
+                </div>
+
+                <div class="glass-panel rounded-2xl p-5 border border-slate-800 space-y-4 hover:border-emerald-500/40 transition-all">
+                    <div class="h-44 rounded-xl overflow-hidden bg-slate-900 relative">
+                        <img src="https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=600&q=80" alt="Option C" class="w-full h-full object-cover">
+                        <span class="absolute top-3 left-3 px-2 py-1 bg-emerald-500/90 text-slate-950 font-bold text-[10px] rounded uppercase">Option C</span>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-white">Neo-Classical Residence</h3>
+                        <p class="text-xs text-slate-400 mt-1">Symmetrical facade design, grand entry porch columns, and traditional tiled roofing.</p>
+                    </div>
+                    <div class="text-xs space-y-1.5 pt-2 font-mono text-slate-300 border-t border-slate-800">
+                        <div class="flex justify-between"><span>Plot Utilization:</span><span class="text-emerald-400">84%</span></div>
+                        <div class="flex justify-between"><span>Est. Construction Cost:</span><span class="text-white">$110,000</span></div>
+                        <div class="flex justify-between"><span>Energy Rating:</span><span class="text-amber-400">B Standard</span></div>
+                    </div>
+                    <button onclick="openComparisonModal('Option C')" class="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-white border border-slate-700">Compare Specs</button>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- MODULE 8: EXPORT STUDIO -->
+        <section id="module-export" class="hidden space-y-6">
+            <div class="border-b border-slate-800 pb-4">
+                <h2 class="text-2xl font-bold text-white flex items-center gap-2"><i class="fa-solid fa-download text-blueprint-400"></i> Download & Export Studio</h2>
+                <p class="text-sm text-slate-400">Export CAD drawing deliverables, 3D snapshots/meshes, and a printable project dossier.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="glass-panel p-6 rounded-2xl border border-slate-800 space-y-4">
+                    <div class="w-10 h-10 rounded-xl bg-blueprint-500/20 text-blueprint-400 flex items-center justify-center text-lg"><i class="fa-solid fa-file-image"></i></div>
+                    <h3 class="text-base font-bold text-white">2D Plan (PNG / SVG)</h3>
+                    <p class="text-xs text-slate-400">High-resolution floor blueprint as raster PNG or scalable SVG vector (opens in Illustrator, Inkscape, AutoCAD import).</p>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button data-sfx="download" onclick="downloadBlueprintPNG()" class="py-2.5 rounded-xl bg-blueprint-500 hover:bg-blueprint-400 text-slate-950 font-bold text-xs flex items-center justify-center gap-2"><i class="fa-solid fa-download"></i> PNG</button>
+                        <button data-sfx="download" onclick="downloadBlueprintSVG()" class="py-2.5 rounded-xl bg-sky-300 hover:bg-sky-200 text-slate-950 font-bold text-xs flex items-center justify-center gap-2"><i class="fa-solid fa-vector-square"></i> SVG</button>
+                    </div>
+                </div>
+
+                <div class="glass-panel p-6 rounded-2xl border border-slate-800 space-y-4">
+                    <div class="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center text-lg"><i class="fa-solid fa-file-pdf"></i></div>
+                    <h3 class="text-base font-bold text-white">Project Dossier (PDF)</h3>
+                    <p class="text-xs text-slate-400">Opens a print sheet with plan, room schedule, BOQ and budget split. Choose "Save as PDF" in the print dialog.</p>
+                    <button data-sfx="none" onclick="generatePDFReport()" class="w-full py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center justify-center gap-2"><i class="fa-solid fa-file-invoice"></i> Open Report Sheet</button>
+                </div>
+
+                <div class="glass-panel p-6 rounded-2xl border border-slate-800 space-y-4">
+                    <div class="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-lg"><i class="fa-solid fa-cube"></i></div>
+                    <h3 class="text-base font-bold text-white">3D Model (.OBJ) & Snapshot</h3>
+                    <p class="text-xs text-slate-400">Export the building + placed furniture as .OBJ geometry (Blender / AutoCAD / BIM import) or a PNG snapshot of the 3D view.</p>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button data-sfx="download" onclick="exportOBJ()" class="py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center justify-center gap-2"><i class="fa-solid fa-box-open"></i> .OBJ</button>
+                        <button data-sfx="download" onclick="export3dModelSnapshot()" class="py-2.5 rounded-xl bg-emerald-300 hover:bg-emerald-200 text-slate-950 font-bold text-xs flex items-center justify-center gap-2"><i class="fa-solid fa-camera"></i> PNG</button>
+                    </div>
+                </div>
+
+                <div class="glass-panel p-6 rounded-2xl border border-slate-800 space-y-4">
+                    <div class="w-10 h-10 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center text-lg"><i class="fa-solid fa-print"></i></div>
+                    <h3 class="text-base font-bold text-white">Print Layout</h3>
+                    <p class="text-xs text-slate-400">Clean white A4-landscape sheet with title block, ready to print to paper or PDF.</p>
+                    <button data-sfx="none" onclick="openPrintLayout()" class="w-full py-2.5 rounded-xl bg-purple-500 hover:bg-purple-400 text-slate-950 font-bold text-xs flex items-center justify-center gap-2"><i class="fa-solid fa-print"></i> Open Print Layout</button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+
+    <!-- ========================================== -->
+    <!-- FOOTER                                     -->
+    <!-- ========================================== -->
+    <footer class="border-t border-slate-800/80 glass-panel py-6 px-4 lg:px-8 mt-12 text-xs text-slate-400">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-2">
+                <i class="fa-solid fa-drafting-compass text-blueprint-400"></i>
+                <span class="font-semibold text-slate-300">ArchiTech AI Design Platform</span>
+                <span>• © 2026 Architectural AI Systems</span>
+            </div>
+            <div class="flex space-x-4 font-mono text-[11px]">
+                <span>2D: HTML5 Canvas / SVG</span>
+                <span>3D: Three.js r128</span>
+                <span>Charts: Chart.js</span>
+                <span>Motion: GSAP</span>
+            </div>
+        </div>
+    </footer>
+
+
+    <!-- ========================================== -->
+    <!-- AUTH MODAL                                 -->
+    <!-- ========================================== -->
+    <div id="auth-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden items-center justify-center p-4">
+        <div class="glass-panel max-w-md w-full rounded-2xl border border-slate-700 p-6 relative shadow-2xl">
+            <button onclick="closeAuthModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            <div class="text-center mb-6">
+                <div class="w-12 h-12 rounded-xl bg-blueprint-500/20 text-blueprint-400 flex items-center justify-center text-xl mx-auto mb-2 border border-blueprint-500/30"><i class="fa-solid fa-user-shield"></i></div>
+                <h3 id="auth-title" class="text-xl font-bold text-white">Architect Portal Access</h3>
+                <p class="text-xs text-slate-400 mt-1">Save custom designs, manage project states & export packages</p>
+            </div>
+            <div class="flex bg-slate-900 rounded-xl p-1 mb-6 border border-slate-800 text-xs font-semibold">
+                <button id="tab-login" onclick="switchAuthTab('login')" class="flex-1 py-2 rounded-lg bg-blueprint-500 text-slate-950">Login</button>
+                <button id="tab-register" onclick="switchAuthTab('register')" class="flex-1 py-2 rounded-lg text-slate-400 hover:text-white">Register</button>
+            </div>
+            <form id="auth-form" onsubmit="handleAuthSubmit(event)" class="space-y-4">
+                <div id="name-field-container" class="hidden">
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Full Name / Studio Name</label>
+                    <input type="text" id="auth-name" placeholder="Arch. Alex Wright" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-blueprint-400">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Email Address</label>
+                    <input type="email" id="auth-email" required placeholder="alex@architecture.com" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-blueprint-400">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Password</label>
+                    <input type="password" id="auth-password" required placeholder="••••••••" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-blueprint-400">
+                </div>
+                <button type="submit" id="auth-submit-btn" class="w-full py-3 rounded-xl bg-blueprint-500 hover:bg-blueprint-400 text-slate-950 font-bold text-sm shadow-lg shadow-blueprint-500/20 transition-all">Sign In to Studio</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- COMPARISON MODAL -->
+    <div id="compare-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden items-center justify-center p-4">
+        <div class="glass-panel max-w-2xl w-full rounded-2xl border border-slate-700 p-6 relative">
+            <button onclick="closeComparisonModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            <h3 class="text-lg font-bold text-white mb-4">Architectural Comparison Matrix</h3>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs border-collapse">
+                    <thead>
+                        <tr class="border-b border-slate-800 text-slate-400 font-mono">
+                            <th class="p-2">METRIC</th>
+                            <th class="p-2 text-blueprint-400">OPTION A (MODERN)</th>
+                            <th class="p-2 text-amber-400">OPTION B (CONTEMPORARY)</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-800/60 text-slate-200 font-mono">
+                        <tr><td class="p-2 text-slate-400">Structure Type</td><td class="p-2">RCC Concrete Frame</td><td class="p-2">Hybrid Steel & Timber</td></tr>
+                        <tr><td class="p-2 text-slate-400">Plot Coverage</td><td class="p-2">1,580 Sq Ft</td><td class="p-2">1,650 Sq Ft</td></tr>
+                        <tr><td class="p-2 text-slate-400">Est. Timeline</td><td class="p-2">7 Months</td><td class="p-2">8.5 Months</td></tr>
+                        <tr><td class="p-2 text-slate-400">HVAC Load Efficiency</td><td class="p-2">High (PassivHaus)</td><td class="p-2">Optimal</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- PRINT LAYOUT -->
+    <div id="print-layout" class="hidden fixed inset-0 z-[70] bg-slate-950/95 overflow-auto p-4 md:p-8">
+        <div class="no-print max-w-5xl mx-auto flex items-center justify-between mb-4">
+            <div class="text-sm text-slate-300"><i class="fa-solid fa-print text-blueprint-400 mr-2"></i>Print preview · A4 landscape · choose "Save as PDF" to export a PDF</div>
+            <div class="flex gap-2">
+                <button data-sfx="download" onclick="window.print()" class="px-4 py-2 rounded-lg bg-blueprint-500 hover:bg-blueprint-400 text-slate-950 font-bold text-xs"><i class="fa-solid fa-print mr-1"></i> Print / Save PDF</button>
+                <button onclick="closePrintLayout()" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-white text-xs border border-slate-700">Close</button>
+            </div>
+        </div>
+        <div id="print-sheet" class="max-w-5xl mx-auto bg-white text-slate-900 p-8 rounded-lg shadow-2xl"></div>
+    </div>
+
+    <!-- FX CANVAS (scan particles) -->
+    <canvas id="fx-canvas" class="hidden fixed inset-0 z-[80] pointer-events-none"></canvas>
+
+    <!-- ========================================== -->
+    <!-- ARCHIBOT                                   -->
+    <!-- ========================================== -->
+    <button id="bot-fab" data-sfx="none" onclick="toggleBot()" aria-label="Open ArchiBot assistant" title="ArchiBot AI Assistant" class="bot-fab fixed bottom-6 right-6 z-[55] w-14 h-14 rounded-full bg-gradient-to-br from-blueprint-400 to-blue-600 text-slate-950 text-xl flex items-center justify-center border-2 border-sky-200/60">
+        <i class="fa-solid fa-robot"></i>
+    </button>
+
+    <aside id="bot-panel" aria-hidden="true" class="fixed top-0 right-0 h-full w-full sm:w-[400px] z-[56] bg-slate-900/95 backdrop-blur-xl border-l border-blueprint-500/30 shadow-2xl translate-x-full transition-transform duration-300 flex flex-col">
+        <div class="flex items-center justify-between px-5 py-4 border-b border-slate-800 bg-slate-950/60">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-blueprint-500/20 border border-blueprint-400/40 text-blueprint-400 flex items-center justify-center glow-blueprint"><i class="fa-solid fa-robot"></i></div>
+                <div>
+                    <div class="font-bold text-white text-sm">ArchiBot</div>
+                    <div class="text-[10px] font-mono text-emerald-400 flex items-center gap-1"><i class="fa-solid fa-circle text-[6px]"></i> Rule-based assistant · uses your project data</div>
+                </div>
+            </div>
+            <button onclick="toggleBot()" class="text-slate-400 hover:text-white p-2" aria-label="Close ArchiBot"><i class="fa-solid fa-xmark text-lg"></i></button>
+        </div>
+
+        <div id="bot-messages" class="flex-1 overflow-y-auto px-4 py-4 space-y-3 text-xs"></div>
+
+        <div class="px-4 pt-3 pb-4 border-t border-slate-800 space-y-3 bg-slate-950/60">
+            <div class="text-[10px] uppercase tracking-wider text-slate-500 font-semibold">One-click prompts</div>
+            <div class="flex flex-col gap-2">
+                <button onclick="botPrompt('daylight')" class="text-left px-3 py-2 rounded-lg bg-slate-800/80 hover:bg-blueprint-500/20 border border-slate-700 hover:border-blueprint-400/50 text-[11px] text-slate-200 transition-all"><i class="fa-regular fa-sun text-amber-400 mr-2"></i>Optimize floor plan for maximum natural daylight</button>
+                <button onclick="botPrompt('vastu')" class="text-left px-3 py-2 rounded-lg bg-slate-800/80 hover:bg-blueprint-500/20 border border-slate-700 hover:border-blueprint-400/50 text-[11px] text-slate-200 transition-all"><i class="fa-solid fa-compass text-emerald-400 mr-2"></i>Suggest Vastu / Feng Shui compliant room orientations</button>
+                <button onclick="botPrompt('budget')" class="text-left px-3 py-2 rounded-lg bg-slate-800/80 hover:bg-blueprint-500/20 border border-slate-700 hover:border-blueprint-400/50 text-[11px] text-slate-200 transition-all"><i class="fa-solid fa-piggy-bank text-purple-400 mr-2"></i>Suggest low-budget structural modifications</button>
+            </div>
+            <form onsubmit="botSend(event)" class="flex gap-2">
+                <input id="bot-input" type="text" placeholder="Ask about daylight, vastu, budget, solar…" class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blueprint-400">
+                <button type="submit" class="px-3 rounded-lg bg-blueprint-500 hover:bg-blueprint-400 text-slate-950"><i class="fa-solid fa-paper-plane"></i></button>
+            </form>
+        </div>
+    </aside>
+
+    <div id="toast" class="fixed bottom-24 left-1/2 -translate-x-1/2 z-[90] hidden px-4 py-2 rounded-lg bg-slate-900/95 border border-blueprint-500/40 text-xs text-slate-100 shadow-xl max-w-[90vw] text-center"></div>
+
+
+    <!-- ========================================== -->
+    <!-- APPLICATION JAVASCRIPT LOGIC               -->
+    <!-- ========================================== -->
+    <script>
+    // =====================================================
+    // GLOBAL STATE + HELPERS
+    // =====================================================
+    const $ = (id) => document.getElementById(id);
+    const fmt = (n) => Math.round(n).toLocaleString('en-US');
+    const money = (n) => '$' + fmt(n);
+    const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+    const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const fmtFt = (v) => (Number.isInteger(v) ? v : v.toFixed(1)) + "'";
+
+    const appState = {
+        currentModule: 'home',
+        user: null,
+        projectData: {
+            length: 30, width: 60, calculatedArea: 1800,
+            buildingType: 'Residential House', orientation: 'North Facing',
+            floors: 2, bedrooms: 3, bathrooms: 2, livingHalls: 1, garages: 1,
+            style: 'Modern Minimalist', budget: 120000
+        },
+        canvasLayers: { furniture: true, dimensions: true, electrical: false, plumbing: false },
+        roofVisible: true,
+        wallTex: 'stucco',
+        floorTex: 'oak'
+    };
+
+    const MODULES = ['home', 'wizard', 'generating', 'viewer2d', 'viewer3d', 'analytics', 'gallery', 'export'];
+    const NAV_IDS = ['home', 'wizard', 'viewer2d', 'viewer3d', 'analytics', 'gallery', 'export'];
+
+    let toastTimer = null;
+    function showToast(msg) {
+        const t = $('toast');
+        t.textContent = msg;
+        t.classList.remove('hidden');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => t.classList.add('hidden'), 3200);
+    }
+
+    function downloadBlob(blob, name) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = name;
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1500);
+    }
+
+    // =====================================================
+    // AUDIO FEEDBACK (Web Audio API, no files needed)
+    // =====================================================
+    let audioCtx = null, soundOn = true;
+    function getAudio() {
+        if (!audioCtx) {
+            try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { audioCtx = null; }
+        }
+        if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+        return audioCtx;
+    }
+    function tone(freq, dur, type, vol, slideTo, delay) {
+        if (!soundOn) return;
+        const ctx = getAudio(); if (!ctx) return;
+        const t = ctx.currentTime + (delay || 0);
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = type || 'sine';
+        o.frequency.setValueAtTime(freq, t);
+        if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, t + dur);
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(vol || 0.04, t + 0.008);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+        o.connect(g); g.connect(ctx.destination);
+        o.start(t); o.stop(t + dur + 0.03);
+    }
+    const sfx = {
+        click() { tone(1400, 0.05, 'square', 0.02, 900); },
+        generate() {
+            tone(180, 0.8, 'sawtooth', 0.035, 1700);
+            tone(900, 0.06, 'square', 0.025, null, 0.25);
+            tone(1250, 0.06, 'square', 0.025, null, 0.45);
+            tone(1700, 0.12, 'square', 0.025, null, 0.7);
+        },
+        download() { tone(660, 0.09, 'sine', 0.06); tone(990, 0.16, 'sine', 0.06, null, 0.09); },
+        toggle() { tone(520, 0.05, 'triangle', 0.04); }
+    };
+    function toggleSound() {
+        soundOn = !soundOn;
+        $('sound-icon').className = soundOn ? 'fa-solid fa-volume-high text-sm' : 'fa-solid fa-volume-xmark text-sm text-slate-500';
+        if (soundOn) sfx.toggle();
+    }
+    document.addEventListener('click', (e) => {
+        const el = e.target.closest('button, label, a');
+        if (!el || el.dataset.sfx) return;
+        sfx.click();
+    });
+
+    // =====================================================
+    // BLUEPRINT SCAN PARTICLE FX
+    // =====================================================
+    function runScanFx(ms) {
+        ms = ms || 1600;
+        if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+        const cv = $('fx-canvas'); const ctx = cv.getContext('2d');
+        cv.width = window.innerWidth; cv.height = window.innerHeight;
+        cv.classList.remove('hidden');
+        const cols = ['#38bdf8', '#f59e0b', '#10b981', '#a855f7'];
+        const parts = [];
+        const t0 = performance.now(); let last = t0;
+        function frame(now) {
+            const p = (now - t0) / ms; const dt = Math.min(0.05, (now - last) / 1000); last = now;
+            ctx.clearRect(0, 0, cv.width, cv.height);
+            if (p < 1) {
+                const y = p * cv.height;
+                const grd = ctx.createLinearGradient(0, y - 140, 0, y);
+                grd.addColorStop(0, 'rgba(56,189,248,0)'); grd.addColorStop(1, 'rgba(56,189,248,0.16)');
+                ctx.fillStyle = grd; ctx.fillRect(0, y - 140, cv.width, 140);
+                ctx.shadowColor = '#38bdf8'; ctx.shadowBlur = 14; ctx.fillStyle = '#7dd3fc';
+                ctx.fillRect(0, y - 1, cv.width, 2); ctx.shadowBlur = 0;
+                for (let i = 0; i < 9; i++) {
+                    parts.push({ x: Math.random() * cv.width, y: y, vx: (Math.random() - 0.5) * 70, vy: -20 - Math.random() * 90, life: 0.5 + Math.random() * 0.7, max: 1.2, s: 1.5 + Math.random() * 2.5, c: cols[(Math.random() * cols.length) | 0] });
+                }
+            }
+            for (let i = parts.length - 1; i >= 0; i--) {
+                const q = parts[i];
+                q.life -= dt; q.x += q.vx * dt; q.y += q.vy * dt; q.vy += 60 * dt;
+                if (q.life <= 0) { parts.splice(i, 1); continue; }
+                ctx.globalAlpha = Math.min(1, q.life / 0.5);
+                ctx.fillStyle = q.c;
+                ctx.fillRect(q.x, q.y, q.s, q.s);
+                ctx.globalAlpha = 1;
+            }
+            if (p < 1 || parts.length) requestAnimationFrame(frame);
+            else { ctx.clearRect(0, 0, cv.width, cv.height); cv.classList.add('hidden'); }
+        }
+        requestAnimationFrame(frame);
+    }
+    function fxDownload() { sfx.download(); runScanFx(1100); }
+
+    // =====================================================
+    // NAVIGATION (with GSAP route transitions)
+    // =====================================================
+    let houseDirty = true;
+
+    function navigateTo(moduleId) {
+        if (typeof walkActive !== 'undefined' && walkActive && moduleId !== 'viewer3d') exitWalkthrough();
+        appState.currentModule = moduleId;
+
+        MODULES.forEach(m => { const el = $('module-' + m); if (el) el.classList.add('hidden'); });
+        const activeModule = $('module-' + moduleId);
+        if (activeModule) activeModule.classList.remove('hidden');
+
+        NAV_IDS.forEach(id => {
+            const btn = $('nav-' + id);
+            if (!btn) return;
+            const cls = ['bg-blueprint-500/20', 'text-blueprint-400', 'border', 'border-blueprint-500/30'];
+            if (id === moduleId) btn.classList.add(...cls); else btn.classList.remove(...cls);
+        });
+
+        // GSAP entrance: opacity + slide-up, then stagger cards
+        if (window.gsap && activeModule && !(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches)) {
+            gsap.killTweensOf(activeModule);
+            gsap.fromTo(activeModule, { opacity: 0, y: 32 }, { opacity: 1, y: 0, duration: 0.55, ease: 'power3.out', clearProps: 'opacity,transform' });
+            const cards = Array.from(activeModule.querySelectorAll('.glass-panel, .glass-card')).filter(n => !n.parentElement.closest('.glass-panel'));
+            if (cards.length) {
+                gsap.killTweensOf(cards);
+                gsap.from(cards, { opacity: 0, y: 24, duration: 0.5, stagger: 0.06, delay: 0.08, ease: 'power2.out', clearProps: 'opacity,transform' });
+            }
+        }
+
+        if (moduleId === 'viewer2d') {
+            setTimeout(() => { updateLayerButtons(); updateInspector(); render2DBlueprintCanvas(); }, 50);
+        } else if (moduleId === 'viewer3d') {
+            setTimeout(initThree3DStudio, 50);
+        } else if (moduleId === 'analytics') {
+            setTimeout(refreshAnalytics, 30);
+        }
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function toggleMobileMenu() { $('mobile-menu').classList.toggle('hidden'); }
+
+    // =====================================================
+    // AUTH
+    // =====================================================
+    function openAuthModal() { const m = $('auth-modal'); m.classList.remove('hidden'); m.classList.add('flex'); }
+    function closeAuthModal() { const m = $('auth-modal'); m.classList.add('hidden'); m.classList.remove('flex'); }
+    let isLoginTab = true;
+    function switchAuthTab(type) {
+        isLoginTab = type === 'login';
+        const tabLogin = $('tab-login'), tabReg = $('tab-register');
+        const nameContainer = $('name-field-container'), submitBtn = $('auth-submit-btn');
+        if (isLoginTab) {
+            tabLogin.className = 'flex-1 py-2 rounded-lg bg-blueprint-500 text-slate-950 font-bold';
+            tabReg.className = 'flex-1 py-2 rounded-lg text-slate-400 hover:text-white';
+            nameContainer.classList.add('hidden'); submitBtn.innerText = 'Sign In to Studio';
+        } else {
+            tabReg.className = 'flex-1 py-2 rounded-lg bg-blueprint-500 text-slate-950 font-bold';
+            tabLogin.className = 'flex-1 py-2 rounded-lg text-slate-400 hover:text-white';
+            nameContainer.classList.remove('hidden'); submitBtn.innerText = 'Create Architect Account';
+        }
+    }
+    function handleAuthSubmit(e) {
+        e.preventDefault();
+        const email = $('auth-email').value;
+        const name = $('auth-name').value || 'Architect User';
+        appState.user = { name, email };
+        $('user-name-display').innerText = name.split(' ')[0];
+        $('user-avatar-icon').innerHTML = '<i class="fa-solid fa-user-check text-emerald-400"></i>';
+        closeAuthModal();
+    }
+
+    // =====================================================
+    // REQUIREMENTS FORM
+    // =====================================================
+    function readCounts() {
+        const p = appState.projectData;
+        p.bedrooms = parseInt($('count-bed').innerText) || 0;
+        p.bathrooms = parseInt($('count-bath').innerText) || 0;
+        p.livingHalls = parseInt($('count-living').innerText) || 0;
+        p.garages = parseInt($('count-garage').innerText) || 0;
+    }
+    function readWizard() {
+        const p = appState.projectData;
+        const l = parseFloat($('plot-length').value) || 0;
+        const w = parseFloat($('plot-width').value) || 0;
+        const dimsChanged = (l !== p.length || w !== p.width);
+        p.length = l; p.width = w; p.calculatedArea = l * w;
+        p.orientation = $('plot-orientation').value;
+        p.buildingType = $('building-type').value;
+        const nf = parseInt($('floors-count').value) || 1;
+        if (nf !== p.floors) { p.floors = nf; houseDirty = true; }
+        const st = document.querySelector('input[name="arch-style"]:checked');
+        if (st && st.value !== p.style) { p.style = st.value; houseDirty = true; }
+        readCounts();
+        $('calculated-area').innerText = (l * w).toLocaleString() + ' Sq Ft';
+        if (dimsChanged && l >= 10 && w >= 10) initRooms();
+    }
+    function updatePlotCalculations() { readWizard(); }
+    function adjustCount(elementId, delta) {
+        const el = $(elementId);
+        let val = parseInt(el.innerText) || 0;
+        el.innerText = Math.max(0, val + delta);
+        readCounts();
+    }
+    function setBudget(v) {
+        v = Number(v);
+        appState.projectData.budget = v;
+        $('budget-range').value = v; $('an-budget').value = v;
+        $('budget-value').innerText = money(v);
+        $('an-budget-label').innerText = money(v);
+        if (appState.currentModule === 'analytics') refreshAnalytics();
+    }
+
+    // =====================================================
+    // AI GENERATION SIMULATION
+    // =====================================================
+    const STEP_LABELS = ['Analyzing plot boundary constraints', 'Computing room zoning & circulation layout', 'Rendering vector 2D floor blueprint', 'Generating 3D exterior mesh & lighting'];
+    let generating = false;
+    function triggerAiGeneration(e) {
+        e.preventDefault();
+        if (generating) return;
+        generating = true;
+        readWizard();
+        houseDirty = true;
+        sfx.generate();
+        runScanFx(2600);
+        navigateTo('generating');
+
+        STEP_LABELS.forEach((lbl, i) => {
+            const el = $('step-' + (i + 1));
+            el.className = 'text-slate-500 flex items-center gap-2';
+            el.innerHTML = '<i class="fa-regular fa-circle"></i> ' + lbl;
+        });
+        $('gen-progress-bar').style.width = '0%';
+
+        const steps = [
+            { id: 'step-1', text: 'Analyzing plot boundary constraints & solar angles...', progress: 25 },
+            { id: 'step-2', text: 'Computing room zoning, acoustics & circulation matrix...', progress: 50 },
+            { id: 'step-3', text: 'Synthesizing 2D CAD vector floor plan layers...', progress: 75 },
+            { id: 'step-4', text: 'Rendering 3D mesh geometry, lighting & textures...', progress: 100 }
+        ];
+        let stepIdx = 0;
+        const interval = setInterval(() => {
+            if (stepIdx < steps.length) {
+                const step = steps[stepIdx];
+                $('gen-progress-bar').style.width = step.progress + '%';
+                $('gen-status-text').innerText = step.text;
+                const stepEl = $(step.id);
+                stepEl.className = 'text-blueprint-400 flex items-center gap-2 font-bold';
+                stepEl.innerHTML = '<i class="fa-solid fa-circle-check text-emerald-400"></i> ' + STEP_LABELS[stepIdx];
+                stepIdx++;
+            } else {
+                clearInterval(interval);
+                setTimeout(() => { generating = false; navigateTo('viewer2d'); }, 500);
+            }
+        }, 800);
+    }
+
+
+    // =====================================================
+    // 2D BLUEPRINT: ROOM MODEL
+    // =====================================================
+    const MIN_ROOM = 4;
+    const ROOM_TEMPLATE = [
+        { id: 'master',  name: 'Master Bedroom',       f: [0.02, 0.03, 0.34, 0.46], color: '#38bdf8', floor: 'Hardwood Oak' },
+        { id: 'ensuite', name: 'Ensuite Bath',         f: [0.37, 0.03, 0.17, 0.46], color: '#cbd5e1', floor: 'Marble Tiles' },
+        { id: 'living',  name: 'Living & Dining Hall', f: [0.55, 0.03, 0.43, 0.58], color: '#f59e0b', floor: 'Polished Concrete' },
+        { id: 'kitchen', name: 'Kitchen',              f: [0.02, 0.51, 0.34, 0.46], color: '#10b981', floor: 'Porcelain Tile' },
+        { id: 'bed2',    name: 'Bedroom 2',            f: [0.37, 0.51, 0.31, 0.46], color: '#38bdf8', floor: 'Hardwood Oak' },
+        { id: 'garage',  name: 'Garage / Storage',     f: [0.69, 0.63, 0.29, 0.34], color: '#94a3b8', floor: 'Epoxy Concrete' }
+    ];
+    let rooms = [];
+    let selectedRoomId = null;
+    const view = { z: 1, px: 0, py: 0 };
+    const snap = (v, s) => Math.round(v / (s || 0.5)) * (s || 0.5);
+
+    function initRooms() {
+        const L = appState.projectData.length, W = appState.projectData.width;
+        rooms = ROOM_TEMPLATE.map(t => ({
+            id: t.id, name: t.name, color: t.color, floor: t.floor,
+            x: snap(t.f[0] * W), y: snap(t.f[1] * L),
+            w: Math.max(MIN_ROOM, snap(t.f[2] * W)), h: Math.max(MIN_ROOM, snap(t.f[3] * L))
+        }));
+        selectedRoomId = null;
+    }
+    function resetPlan() {
+        initRooms(); view.z = 1; view.px = 0; view.py = 0;
+        updateInspector(); render2DBlueprintCanvas();
+        showToast('Layout reset to default plan');
+    }
+    function planGeom() {
+        const L = appState.projectData.length || 30, W = appState.projectData.width || 60;
+        const s = Math.min(640 / W, 380 / L);
+        const ow = W * s, oh = L * s;
+        return { s, ow, oh, ox: (800 - ow) / 2, oy: (520 - oh) / 2 + 6 };
+    }
+
+    // ---------- theme palettes ----------
+    const THEMES = {
+        dark:  { bg: '#020617', grid: '#1e293b', plot: '#38bdf8', wall: '#64748b', fill: '#1e293b', text: '#e2e8f0', sub: '#94a3b8', dim: '#f59e0b', furn: 'rgba(255,255,255,0.30)', elec: '#fbbf24', cold: '#38bdf8', hot: '#f87171', selFill: '#10304b', handle: '#f59e0b' },
+        print: { bg: '#ffffff', grid: '#e5e7eb', plot: '#0f172a', wall: '#334155', fill: '#f8fafc', text: '#0f172a', sub: '#475569', dim: '#b45309', furn: 'rgba(15,23,42,0.50)', elec: '#b45309', cold: '#0369a1', hot: '#b91c1c', selFill: '#e0f2fe', handle: '#b45309' }
+    };
+
+    // ---------- primitive scene builder (shared by canvas, PNG, SVG, print) ----------
+    function buildPrims(themeName, opts) {
+        opts = opts || {};
+        const T = THEMES[themeName], g = planGeom(), s = g.s, ly = appState.canvasLayers, P = appState.projectData;
+        const out = [];
+        const add = (o) => out.push(o);
+        const line = (x1, y1, x2, y2, stroke, sw, dash) => add({ t: 'line', x1, y1, x2, y2, stroke, sw: sw || 1, dash });
+
+        add({ t: 'rect', x: 0, y: 0, w: 800, h: 520, fill: T.bg });
+        for (let x = 0; x <= 800; x += 20) line(x, 0, x, 520, T.grid, 0.5);
+        for (let y = 0; y <= 520; y += 20) line(0, y, 800, y, T.grid, 0.5);
+        add({ t: 'rect', x: g.ox, y: g.oy, w: g.ow, h: g.oh, stroke: T.plot, sw: 2 });
+
+        rooms.forEach(r => {
+            const x = g.ox + r.x * s, y = g.oy + r.y * s, w = r.w * s, h = r.h * s;
+            const sel = opts.handles && r.id === selectedRoomId;
+            add({ t: 'rect', x, y, w, h, fill: sel ? T.selFill : T.fill, stroke: sel ? T.plot : T.wall, sw: 3 });
+            add({ t: 'text', str: r.name, x: x + 8, y: y + 18, fill: themeName === 'dark' ? r.color : T.text, size: w < 100 ? 10 : 12, weight: 'bold' });
+            if (ly.dimensions) {
+                add({ t: 'text', str: fmtFt(r.w) + ' x ' + fmtFt(r.h), x: x + 8, y: y + 32, fill: T.sub, size: 10, family: 'monospace' });
+                add({ t: 'text', str: Math.round(r.w * r.h) + ' sq ft', x: x + 8, y: y + 45, fill: T.sub, size: 10, family: 'monospace' });
+            }
+            if (ly.furniture) furnPrims(r, x, y, w, h, s, T, add);
+            if (ly.electrical) elecRoomPrims(r, x, y, w, h, T, add);
+        });
+
+        if (ly.electrical) elecGlobalPrims(g, T, add, line);
+        if (ly.plumbing) plumbPrims(g, s, T, add, line);
+
+        // outer dimensions
+        if (ly.dimensions) {
+            const yy = g.oy - 26;
+            line(g.ox, yy, g.ox + g.ow, yy, T.dim, 1);
+            line(g.ox, yy - 4, g.ox, yy + 4, T.dim, 1); line(g.ox + g.ow, yy - 4, g.ox + g.ow, yy + 4, T.dim, 1);
+            add({ t: 'text', str: P.width + ' FT', x: g.ox + g.ow / 2, y: yy - 5, fill: T.dim, size: 12, weight: 'bold', family: 'monospace', anchor: 'middle' });
+            const xx = g.ox - 44;
+            line(xx, g.oy, xx, g.oy + g.oh, T.dim, 1);
+            line(xx - 4, g.oy, xx + 4, g.oy, T.dim, 1); line(xx - 4, g.oy + g.oh, xx + 4, g.oy + g.oh, T.dim, 1);
+            add({ t: 'text', str: P.length + ' FT', x: xx - 6, y: g.oy + g.oh / 2, fill: T.dim, size: 12, weight: 'bold', family: 'monospace', anchor: 'middle', rot: -90 });
+        }
+
+        add({ t: 'text', str: 'PLAN VIEW  |  ' + P.style.toUpperCase() + '  |  ' + P.orientation.toUpperCase(), x: 400, y: 512, fill: T.sub, size: 9, family: 'monospace', anchor: 'middle' });
+
+        // legend
+        let lx = 14;
+        if (ly.electrical) {
+            add({ t: 'circle', cx: lx + 4, cy: 496, r: 3.5, fill: T.elec });
+            add({ t: 'text', str: 'Outlet', x: lx + 12, y: 499, fill: T.sub, size: 9 });
+            add({ t: 'text', str: 'S', x: lx + 52, y: 499, fill: T.elec, size: 10, weight: 'bold' });
+            add({ t: 'text', str: 'Switch', x: lx + 62, y: 499, fill: T.sub, size: 9 });
+            add({ t: 'circle', cx: lx + 112, cy: 496, r: 5, stroke: T.elec, sw: 1 });
+            add({ t: 'text', str: 'Light', x: lx + 122, y: 499, fill: T.sub, size: 9 });
+            lx += 165;
+        }
+        if (ly.plumbing) {
+            line(lx, 496, lx + 18, 496, T.cold, 2);
+            add({ t: 'text', str: 'Cold', x: lx + 22, y: 499, fill: T.sub, size: 9 });
+            line(lx + 52, 496, lx + 70, 496, T.hot, 2, [4, 3]);
+            add({ t: 'text', str: 'Hot', x: lx + 74, y: 499, fill: T.sub, size: 9 });
+        }
+
+        // interactive handles (canvas only)
+        if (opts.handles) {
+            rooms.forEach(r => {
+                const x = g.ox + r.x * s, y = g.oy + r.y * s, w = r.w * s, h = r.h * s;
+                const sel = r.id === selectedRoomId, hs = sel ? 10 : 6;
+                [[x, y], [x + w, y], [x, y + h], [x + w, y + h]].forEach(c => {
+                    add({ t: 'rect', x: c[0] - hs / 2, y: c[1] - hs / 2, w: hs, h: hs, fill: sel ? T.handle : T.bg, stroke: T.handle, sw: 1.5 });
+                });
+            });
+        }
+        return out;
+    }
+
+    function furnPrims(r, x, y, w, h, s, T, add) {
+        const st = T.furn, m = 1 * s;
+        const box = (bx, by, bw, bh) => add({ t: 'rect', x: bx, y: by, w: bw, h: bh, stroke: st, sw: 1 });
+        if (r.id === 'master' || r.id === 'bed2') {
+            const bw = 5 * s, bh = 6.5 * s;
+            if (r.w >= 8.5 && r.h >= 9.5) {
+                const bx = x + w - bw - m, by = y + h - bh - m;
+                box(bx, by, bw, bh);
+                box(bx + 0.4 * s, by + 0.3 * s, 1.9 * s, 1.1 * s); box(bx + bw - 2.3 * s, by + 0.3 * s, 1.9 * s, 1.1 * s);
+                add({ t: 'line', x1: bx, y1: by + bh * 0.45, x2: bx + bw, y2: by + bh * 0.45, stroke: st, sw: 1 });
+                box(bx - 1.7 * s, by, 1.3 * s, 1.3 * s); box(bx + bw + 0.4 * s, by, 1.3 * s, 1.3 * s);
+            }
+        } else if (r.id === 'living') {
+            if (r.w >= 16 && r.h >= 12) {
+                const sx = x + 1.5 * s, sy = y + h - 4.5 * s;
+                box(sx, sy, 7 * s, 3 * s); box(sx, sy, 7 * s, 0.8 * s);
+                box(sx + 1.5 * s, sy - 3 * s, 3.5 * s, 2 * s);
+                const tx = x + w - 7.5 * s, ty = y + 2.5 * s;
+                add({ t: 'rect', x: tx, y: ty, w: 6 * s, h: 3 * s, stroke: st, sw: 1 });
+                for (let i = 0; i < 3; i++) { box(tx + (0.8 + i * 1.8) * s, ty - 1 * s, 1 * s, 0.8 * s); box(tx + (0.8 + i * 1.8) * s, ty + 3.2 * s, 1 * s, 0.8 * s); }
+            }
+        } else if (r.id === 'kitchen') {
+            if (r.w >= 9) box(x + m, y + h - 3.2 * s, w - 2 * m, 2.2 * s);
+            if (r.w >= 11 && r.h >= 12) { box(x + w / 2 - 2.5 * s, y + h / 2 - 1.2 * s, 5 * s, 2.5 * s); }
+        } else if (r.id === 'garage') {
+            const horiz = r.w >= r.h;
+            const cw = horiz ? 15 * s : 6.5 * s, ch = horiz ? 6.5 * s : 15 * s;
+            if (r.w >= (horiz ? 17 : 8.5) && r.h >= (horiz ? 8.5 : 17)) {
+                const cx = x + (w - cw) / 2, cy = y + (h - ch) / 2 + 6;
+                box(cx, cy, cw, ch);
+                if (horiz) { box(cx + cw * 0.28, cy + 0.6 * s, cw * 0.42, ch - 1.2 * s); } else { box(cx + 0.6 * s, cy + ch * 0.28, cw - 1.2 * s, ch * 0.42); }
+            }
+        }
+    }
+
+    function elecRoomPrims(r, x, y, w, h, T, add) {
+        const cx = x + w / 2, cy = y + h / 2;
+        add({ t: 'circle', cx, cy, r: 6, stroke: T.elec, sw: 1.3 });
+        add({ t: 'line', x1: cx - 4, y1: cy - 4, x2: cx + 4, y2: cy + 4, stroke: T.elec, sw: 1 });
+        add({ t: 'line', x1: cx - 4, y1: cy + 4, x2: cx + 4, y2: cy - 4, stroke: T.elec, sw: 1 });
+        add({ t: 'text', str: 'S', x: x + 7, y: y + h - 8, fill: T.elec, size: 11, weight: 'bold' });
+        add({ t: 'line', x1: x + 12, y1: y + h - 12, x2: cx - 4, y2: cy + 5, stroke: T.elec, sw: 0.8, dash: [3, 3] });
+        [[x + 5, y + h * 0.55], [x + w - 5, y + h * 0.55], [x + w * 0.7, y + h - 5]].forEach(p => {
+            add({ t: 'circle', cx: p[0], cy: p[1], r: 3.5, fill: T.elec });
+        });
+    }
+    function elecGlobalPrims(g, T, add, line) {
+        const dbx = g.ox - 22, dby = g.oy + 10, ty = g.oy - 6;
+        add({ t: 'rect', x: dbx - 9, y: dby, w: 18, h: 26, fill: T.bg, stroke: T.elec, sw: 1.5 });
+        add({ t: 'text', str: 'DB', x: dbx, y: dby + 17, fill: T.elec, size: 9, weight: 'bold', anchor: 'middle' });
+        line(dbx, dby, dbx, ty, T.elec, 1, [5, 3]);
+        line(dbx, ty, g.ox + g.ow, ty, T.elec, 1, [5, 3]);
+        rooms.forEach(r => {
+            const cx = g.ox + (r.x + r.w / 2) * g.s, cy = g.oy + (r.y + r.h / 2) * g.s;
+            line(cx, ty, cx, cy - 6, T.elec, 0.8, [3, 3]);
+        });
+    }
+    function plumbPrims(g, s, T, add, line) {
+        const top = g.oy - 12, bottom = g.oy + g.oh + 10;
+        const ext = { top: [1e9, -1e9], bottom: [1e9, -1e9] };
+        rooms.forEach(r => {
+            if (r.id !== 'ensuite' && r.id !== 'kitchen') return;
+            const x = g.ox + r.x * s, y = g.oy + r.y * s, w = r.w * s, h = r.h * s;
+            const isTop = (y + h / 2) < (g.oy + g.oh / 2);
+            const wall = isTop ? y + 4 : y + h - 4;
+            const hy = isTop ? top : bottom;
+            const side = isTop ? 'top' : 'bottom';
+            const fx = (xx) => {
+                ext[side][0] = Math.min(ext[side][0], xx, xx + 5); ext[side][1] = Math.max(ext[side][1], xx + 5);
+            };
+            if (r.id === 'ensuite') {
+                const wcx = x + w * 0.3, bx = x + w * 0.68;
+                add({ t: 'rect', x: wcx - 7, y: isTop ? wall : wall - 18, w: 14, h: 18, stroke: T.cold, sw: 1.3 });
+                add({ t: 'circle', cx: bx, cy: isTop ? wall + 8 : wall - 8, r: 7, stroke: T.cold, sw: 1.3 });
+                add({ t: 'rect', x: x + w - 32, y: isTop ? wall + 14 : wall - 42, w: 28, h: 28, stroke: T.cold, sw: 1.3 });
+                line(wcx, wall, wcx, hy, T.cold, 2); fx(wcx);
+                line(bx, wall, bx, hy, T.cold, 2); line(bx + 5, wall, bx + 5, hy - 3, T.hot, 1.6, [4, 3]); fx(bx);
+            } else {
+                const sx = x + w * 0.5;
+                add({ t: 'rect', x: sx - 11, y: isTop ? wall : wall - 14, w: 22, h: 14, stroke: T.cold, sw: 1.3 });
+                add({ t: 'circle', cx: sx, cy: isTop ? wall + 7 : wall - 7, r: 3, stroke: T.cold, sw: 1 });
+                line(sx - 4, wall, sx - 4, hy, T.cold, 2); line(sx + 4, wall, sx + 4, hy - 3, T.hot, 1.6, [4, 3]); fx(sx - 4);
+            }
+        });
+        ['top', 'bottom'].forEach(k => {
+            const e = ext[k]; if (e[0] > e[1]) return;
+            const yy = k === 'top' ? top : bottom;
+            line(e[0] - 2, yy, e[1] + 2, yy, T.cold, 2);
+            line(e[0] - 2, yy - 3, e[1] + 2, yy - 3, T.hot, 1.6, [4, 3]);
+            add({ t: 'text', str: 'MAIN SUPPLY', x: (e[0] + e[1]) / 2, y: k === 'top' ? yy - 7 : yy + 12, fill: T.cold, size: 8, family: 'monospace', anchor: 'middle' });
+        });
+    }
+
+    // ---------- renderers ----------
+    function renderPrimsCanvas(ctx, prims) {
+        const AL = { start: 'left', middle: 'center', end: 'right' };
+        prims.forEach(p => {
+            if (p.t === 'rect') {
+                if (p.fill) { ctx.fillStyle = p.fill; ctx.fillRect(p.x, p.y, p.w, p.h); }
+                if (p.stroke) { ctx.strokeStyle = p.stroke; ctx.lineWidth = p.sw || 1; ctx.setLineDash(p.dash || []); ctx.strokeRect(p.x, p.y, p.w, p.h); ctx.setLineDash([]); }
+            } else if (p.t === 'line') {
+                ctx.strokeStyle = p.stroke; ctx.lineWidth = p.sw || 1; ctx.setLineDash(p.dash || []);
+                ctx.beginPath(); ctx.moveTo(p.x1, p.y1); ctx.lineTo(p.x2, p.y2); ctx.stroke(); ctx.setLineDash([]);
+            } else if (p.t === 'circle') {
+                ctx.beginPath(); ctx.arc(p.cx, p.cy, p.r, 0, Math.PI * 2);
+                if (p.fill) { ctx.fillStyle = p.fill; ctx.fill(); }
+                if (p.stroke) { ctx.strokeStyle = p.stroke; ctx.lineWidth = p.sw || 1; ctx.stroke(); }
+            } else if (p.t === 'text') {
+                ctx.save(); ctx.translate(p.x, p.y); if (p.rot) ctx.rotate(p.rot * Math.PI / 180);
+                ctx.fillStyle = p.fill; ctx.font = (p.weight || 'normal') + ' ' + (p.size || 10) + 'px ' + (p.family || 'Inter, sans-serif');
+                ctx.textAlign = AL[p.anchor || 'start']; ctx.fillText(p.str, 0, 0); ctx.restore();
+            }
+        });
+    }
+
+    function primsToSVG(prims, responsive) {
+        const o = [];
+        o.push('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 520" ' + (responsive ? 'style="width:100%;height:auto;display:block"' : 'width="1600" height="1040"') + ' font-family="Inter, Arial, sans-serif">');
+        const dash = (d) => d ? ' stroke-dasharray="' + d.join(' ') + '"' : '';
+        const n = (v) => Number(v).toFixed(1);
+        prims.forEach(p => {
+            if (p.t === 'rect') {
+                o.push('<rect x="' + n(p.x) + '" y="' + n(p.y) + '" width="' + n(p.w) + '" height="' + n(p.h) + '" fill="' + (p.fill || 'none') + '"' + (p.stroke ? ' stroke="' + p.stroke + '" stroke-width="' + (p.sw || 1) + '"' : '') + dash(p.dash) + '/>');
+            } else if (p.t === 'line') {
+                o.push('<line x1="' + n(p.x1) + '" y1="' + n(p.y1) + '" x2="' + n(p.x2) + '" y2="' + n(p.y2) + '" stroke="' + p.stroke + '" stroke-width="' + (p.sw || 1) + '"' + dash(p.dash) + '/>');
+            } else if (p.t === 'circle') {
+                o.push('<circle cx="' + n(p.cx) + '" cy="' + n(p.cy) + '" r="' + n(p.r) + '" fill="' + (p.fill || 'none') + '"' + (p.stroke ? ' stroke="' + p.stroke + '" stroke-width="' + (p.sw || 1) + '"' : '') + '/>');
+            } else if (p.t === 'text') {
+                o.push('<text x="' + n(p.x) + '" y="' + n(p.y) + '" fill="' + p.fill + '" font-size="' + (p.size || 10) + '" font-weight="' + (p.weight || 'normal') + '"' + (p.family === 'monospace' ? ' font-family="monospace"' : '') + ' text-anchor="' + (p.anchor || 'start') + '"' + (p.rot ? ' transform="rotate(' + p.rot + ' ' + n(p.x) + ' ' + n(p.y) + ')"' : '') + '>' + esc(p.str) + '</text>');
+            }
+        });
+        o.push('</svg>');
+        return o.join('\n');
+    }
+
+    function render2DBlueprintCanvas() {
+        const canvas = $('blueprint-canvas');
+        if (!canvas) return;
+        if (!rooms.length) initRooms();
+        const ctx = canvas.getContext('2d');
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.save();
+        ctx.translate(400 + view.px, 260 + view.py);
+        ctx.scale(view.z, view.z);
+        ctx.translate(-400, -260);
+        renderPrimsCanvas(ctx, buildPrims('dark', { handles: true }));
+        ctx.restore();
+    }
+
+    function updateLayerButtons() {
+        ['furniture', 'dimensions', 'electrical', 'plumbing'].forEach(k => {
+            const b = $('btn-layer-' + k);
+            if (b) b.classList.toggle('layer-active', !!appState.canvasLayers[k]);
+        });
+    }
+    function toggleCanvasLayer(layer) {
+        appState.canvasLayers[layer] = !appState.canvasLayers[layer];
+        updateLayerButtons();
+        render2DBlueprintCanvas();
+    }
+    function zoomCanvas(factor) {
+        view.z = clamp(view.z * factor, 0.6, 2.4);
+        render2DBlueprintCanvas();
+    }
+
+    function updateInspector() {
+        const P = appState.projectData;
+        const r = rooms.find(x => x.id === selectedRoomId);
+        $('insp-room-title').innerText = r ? r.name : 'No room selected';
+        $('insp-room-dim').innerText = r ? fmtFt(r.w) + ' x ' + fmtFt(r.h) : '—';
+        $('insp-room-area').innerText = r ? Math.round(r.w * r.h) + ' Sq Ft' : '—';
+        $('insp-room-floor').innerText = r ? r.floor : '—';
+        const total = rooms.reduce((a, x) => a + x.w * x.h, 0);
+        const plot = P.length * P.width;
+        $('insp-plot').innerText = P.width + "' x " + P.length + "'";
+        $('insp-total').innerText = fmt(total) + ' sq ft';
+        $('insp-cover').innerText = plot ? Math.round(total / plot * 100) + '%' : '—';
+    }
+
+    // ---------- pointer interaction ----------
+    let drag = null;
+    function canvasPoint(e) {
+        const cv = $('blueprint-canvas'), rect = cv.getBoundingClientRect();
+        const sx = (e.clientX - rect.left) * (cv.width / rect.width), sy = (e.clientY - rect.top) * (cv.height / rect.height);
+        return { sx, sy, x: (sx - 400 - view.px) / view.z + 400, y: (sy - 260 - view.py) / view.z + 260 };
+    }
+    function hitHandle(pt) {
+        const g = planGeom(), tol = 9 / view.z;
+        for (let i = rooms.length - 1; i >= 0; i--) {
+            const r = rooms[i];
+            const x = g.ox + r.x * g.s, y = g.oy + r.y * g.s, w = r.w * g.s, h = r.h * g.s;
+            const cs = [['nw', x, y], ['ne', x + w, y], ['sw', x, y + h], ['se', x + w, y + h]];
+            for (const c of cs) if (Math.abs(pt.x - c[1]) <= tol && Math.abs(pt.y - c[2]) <= tol) return { room: r, corner: c[0] };
+        }
+        return null;
+    }
+    function hitRoom(pt) {
+        const g = planGeom();
+        for (let i = rooms.length - 1; i >= 0; i--) {
+            const r = rooms[i];
+            const x = g.ox + r.x * g.s, y = g.oy + r.y * g.s, w = r.w * g.s, h = r.h * g.s;
+            if (pt.x >= x && pt.x <= x + w && pt.y >= y && pt.y <= y + h) return r;
+        }
+        return null;
+    }
+    function onCanvasDown(e) {
+        const cv = $('blueprint-canvas'), pt = canvasPoint(e), g = planGeom();
+        const h = hitHandle(pt);
+        if (h) {
+            selectedRoomId = h.room.id;
+            drag = { mode: 'resize', room: h.room, corner: h.corner, orig: Object.assign({}, h.room) };
+        } else {
+            const r = hitRoom(pt);
+            if (r) {
+                selectedRoomId = r.id;
+                drag = { mode: 'move', room: r, offX: (pt.x - g.ox) / g.s - r.x, offY: (pt.y - g.oy) / g.s - r.y };
+            } else {
+                selectedRoomId = null;
+                drag = { mode: 'pan', sx: pt.sx, sy: pt.sy, px0: view.px, py0: view.py };
+            }
+        }
+        try { cv.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+        updateInspector(); render2DBlueprintCanvas();
+    }
+    function onCanvasMove(e) {
+        const cv = $('blueprint-canvas'), pt = canvasPoint(e), g = planGeom();
+        const W = appState.projectData.width, L = appState.projectData.length;
+        if (!drag) {
+            const h = hitHandle(pt);
+            if (h) cv.style.cursor = (h.corner === 'nw' || h.corner === 'se') ? 'nwse-resize' : 'nesw-resize';
+            else cv.style.cursor = hitRoom(pt) ? 'move' : 'crosshair';
+            return;
+        }
+        if (drag.mode === 'pan') {
+            view.px = drag.px0 + (pt.sx - drag.sx); view.py = drag.py0 + (pt.sy - drag.sy);
+        } else if (drag.mode === 'move') {
+            const r = drag.room;
+            r.x = clamp(snap((pt.x - g.ox) / g.s - drag.offX), 0, Math.max(0, W - r.w));
+            r.y = clamp(snap((pt.y - g.oy) / g.s - drag.offY), 0, Math.max(0, L - r.h));
+        } else if (drag.mode === 'resize') {
+            const r = drag.room, o = drag.orig, c = drag.corner;
+            const fx = clamp(snap((pt.x - g.ox) / g.s), 0, W), fy = clamp(snap((pt.y - g.oy) / g.s), 0, L);
+            if (c.indexOf('w') >= 0) { const right = o.x + o.w; r.x = Math.min(fx, right - MIN_ROOM); r.w = right - r.x; }
+            else { r.x = o.x; r.w = Math.max(MIN_ROOM, fx - o.x); }
+            if (c.indexOf('n') >= 0) { const bottom = o.y + o.h; r.y = Math.min(fy, bottom - MIN_ROOM); r.h = bottom - r.y; }
+            else { r.y = o.y; r.h = Math.max(MIN_ROOM, fy - o.y); }
+        }
+        updateInspector(); render2DBlueprintCanvas();
+    }
+    function onCanvasUp(e) {
+        drag = null;
+        try { $('blueprint-canvas').releasePointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+    }
+
+    // ---------- exports ----------
+    function downloadBlueprintPNG() {
+        if (!rooms.length) initRooms();
+        const cv = document.createElement('canvas'); cv.width = 1600; cv.height = 1040;
+        const ctx = cv.getContext('2d'); ctx.scale(2, 2);
+        renderPrimsCanvas(ctx, buildPrims('dark', {}));
+        cv.toBlob(b => { downloadBlob(b, 'ArchiTech-AI-Blueprint-FloorPlan.png'); }, 'image/png');
+        fxDownload(); showToast('PNG blueprint exported');
+    }
+    function downloadBlueprintSVG() {
+        if (!rooms.length) initRooms();
+        const svg = primsToSVG(buildPrims('dark', {}), false);
+        downloadBlob(new Blob([svg], { type: 'image/svg+xml' }), 'ArchiTech-AI-Blueprint-FloorPlan.svg');
+        fxDownload(); showToast('SVG vector plan exported');
+    }
+
+    function boqRows(m) {
+        return [
+            ['Structural concrete (RCC)', fmt(m.concreteCuFt), 'cu ft (' + fmt(m.concreteCuYd) + ' cu yd)', '—'],
+            ['Steel rebar', fmt(m.rebarLb), 'lb (' + m.rebarTonnes.toFixed(1) + ' t)', '—'],
+            ['Glazing glass surface', fmt(m.glazing), 'sq ft', '—'],
+            ['Plumbing rough-in', '1', 'lot', money(m.plumbing)],
+            ['Electrical rough-in', '1', 'lot', money(m.electrical)],
+            ['Total built-up area', fmt(m.builtUp), 'sq ft', '—']
+        ];
+    }
+
+    function openPrintLayout() {
+        if (!rooms.length) initRooms();
+        const P = appState.projectData, m = computeMetrics();
+        const svg = primsToSVG(buildPrims('print', {}), true);
+        const rows = boqRows(m).map(r => '<tr><td style="padding:3px 8px;border-bottom:1px solid #e2e8f0">' + r[0] + '</td><td style="padding:3px 8px;text-align:right;border-bottom:1px solid #e2e8f0">' + r[1] + '</td><td style="padding:3px 8px;border-bottom:1px solid #e2e8f0">' + r[2] + '</td><td style="padding:3px 8px;text-align:right;border-bottom:1px solid #e2e8f0">' + r[3] + '</td></tr>').join('');
+        const roomRows = rooms.map(r => '<tr><td style="padding:3px 8px;border-bottom:1px solid #e2e8f0">' + esc(r.name) + '</td><td style="padding:3px 8px;border-bottom:1px solid #e2e8f0">' + fmtFt(r.w) + ' x ' + fmtFt(r.h) + '</td><td style="padding:3px 8px;text-align:right;border-bottom:1px solid #e2e8f0">' + Math.round(r.w * r.h) + '</td></tr>').join('');
+        const d = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+        $('print-sheet').innerHTML =
+            '<div style="display:flex;justify-content:space-between;align-items:flex-end;border-bottom:3px solid #0f172a;padding-bottom:8px;margin-bottom:12px">' +
+            '<div><div style="font-size:11px;letter-spacing:.15em;color:#475569">ARCHITECH AI · FLOOR PLAN SHEET</div><div style="font-size:22px;font-weight:800">' + esc(P.buildingType) + ' — ' + esc(P.style) + '</div></div>' +
+            '<div style="text-align:right;font-size:11px;color:#475569">Date: ' + d + '<br>Plot ' + P.width + "' x " + P.length + "' (" + fmt(P.length * P.width) + ' sq ft)<br>' + esc(P.orientation) + ' · ' + P.floors + ' floor(s) · Budget ' + money(P.budget) + '</div></div>' +
+            '<div style="border:1px solid #0f172a;margin-bottom:12px">' + svg + '</div>' +
+            '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;font-size:11px">' +
+            '<div><div style="font-weight:700;margin-bottom:4px">ROOM SCHEDULE</div><table style="width:100%;border-collapse:collapse"><tr style="background:#f1f5f9"><th style="text-align:left;padding:3px 8px">Room</th><th style="text-align:left;padding:3px 8px">Size</th><th style="text-align:right;padding:3px 8px">Sq ft</th></tr>' + roomRows + '</table></div>' +
+            '<div><div style="font-weight:700;margin-bottom:4px">INDICATIVE BOQ</div><table style="width:100%;border-collapse:collapse"><tr style="background:#f1f5f9"><th style="text-align:left;padding:3px 8px">Item</th><th style="text-align:right;padding:3px 8px">Qty</th><th style="text-align:left;padding:3px 8px">Unit</th><th style="text-align:right;padding:3px 8px">Cost</th></tr>' + rows + '</table>' +
+            '<div style="margin-top:6px;color:#475569">Budget split: Structure ' + money(m.cost.structure) + ' · Electrical &amp; Plumbing ' + money(m.cost.mep) + ' · Finishing ' + money(m.cost.finishing) + ' · Interior ' + money(m.cost.interior) + '</div></div></div>' +
+            '<div style="margin-top:10px;font-size:9px;color:#64748b">Generated by ArchiTech AI. Estimates are indicative only and must be verified by a licensed architect / engineer before construction.</div>';
+        document.body.classList.add('printing');
+        $('print-layout').classList.remove('hidden');
+        sfx.toggle();
+    }
+    function closePrintLayout() {
+        document.body.classList.remove('printing');
+        $('print-layout').classList.add('hidden');
+    }
+    function generatePDFReport() {
+        openPrintLayout();
+        showToast('Report sheet ready — press "Print / Save PDF" and pick "Save as PDF"');
+    }
+
+
+    // =====================================================
+    // ANALYTICS ENGINE
+    // =====================================================
+    const STYLE_GLAZE = { 'Modern Minimalist': 0.28, 'Contemporary Villa': 0.22, 'Neo-Classical': 0.14 };
+    const STYLE_MIX = {
+        'Modern Minimalist': { structure: 0.41, mep: 0.16, finishing: 0.25, interior: 0.18 },
+        'Contemporary Villa': { structure: 0.42, mep: 0.16, finishing: 0.24, interior: 0.18 },
+        'Neo-Classical': { structure: 0.40, mep: 0.15, finishing: 0.28, interior: 0.17 }
+    };
+    const SHGI_BASE = { 'North Facing': 35, 'East Facing': 52, 'South Facing': 68, 'West Facing': 82 };
+    const VENT_BASE = { 'North Facing': 72, 'East Facing': 80, 'South Facing': 68, 'West Facing': 64 };
+    const SOLAR_TILT = { 'North Facing': 0.90, 'East Facing': 0.94, 'South Facing': 1.0, 'West Facing': 0.94 };
+
+    function computeMetrics() {
+        const p = appState.projectData;
+        const plotArea = p.length * p.width;
+        const coverage = 0.6;
+        const footprint = plotArea * coverage;
+        const builtUp = footprint * p.floors;
+        const k = Math.sqrt(coverage);
+        const perim = 2 * (p.length * k + p.width * k);
+        const wallArea = perim * 10 * p.floors;
+        const glazeRatio = STYLE_GLAZE[p.style] || 0.2;
+        const glazing = wallArea * glazeRatio;
+        const mix = STYLE_MIX[p.style] || STYLE_MIX['Contemporary Villa'];
+        const cost = { structure: p.budget * mix.structure, mep: p.budget * mix.mep, finishing: p.budget * mix.finishing, interior: p.budget * mix.interior };
+        const concreteCuFt = builtUp * 0.4, rebarLb = builtUp * 7.5;
+        const shgi = clamp(Math.round((SHGI_BASE[p.orientation] || 50) + (glazeRatio - 0.2) * 80), 5, 98);
+        const vent = clamp(Math.round((VENT_BASE[p.orientation] || 70) + (Math.min(p.length, p.width) >= 30 ? 4 : 0) + (glazeRatio > 0.25 ? 2 : 0)), 0, 100);
+        const roofUsable = footprint * 0.55;
+        const kw = roofUsable / 65;
+        const annualKwh = kw * 1550 * (SOLAR_TILT[p.orientation] || 0.94);
+        return {
+            plotArea, footprint, builtUp, perim, wallArea, glazeRatio, glazing, cost,
+            plumbing: cost.mep * 0.44, electrical: cost.mep * 0.56,
+            concreteCuFt, concreteCuYd: concreteCuFt / 27, rebarLb, rebarTonnes: rebarLb * 0.000453592,
+            psf: builtUp ? p.budget / builtUp : 0, shgi, vent, roofUsable, kw, panels: Math.round(kw * 1000 / 400), annualKwh
+        };
+    }
+
+    let budgetChart = null;
+    const PIE_COLORS = ['#38bdf8', '#f59e0b', '#10b981', '#a855f7'];
+    function scoreBar(pct, from, to) {
+        return '<div class="h-2 rounded-full bg-slate-900 overflow-hidden"><div class="h-full rounded-full" style="width:' + clamp(pct, 2, 100) + '%;background:linear-gradient(90deg,' + from + ',' + to + ')"></div></div>';
+    }
+    function refreshAnalytics() {
+        const p = appState.projectData, m = computeMetrics();
+        $('an-budget').value = p.budget; $('an-budget-label').innerText = money(p.budget);
+
+        const psfNote = m.psf < 40 ? 'Very tight' : (m.psf > 150 ? 'Premium' : 'Typical');
+        const psfCol = m.psf < 40 ? 'text-amber-400' : 'text-emerald-400';
+        $('kpi-row').innerHTML = [
+            ['Built-up area', fmt(m.builtUp) + ' sq ft', p.floors + ' floor(s) · ' + fmt(m.footprint) + ' footprint', 'text-blueprint-400'],
+            ['Cost / sq ft', '$' + m.psf.toFixed(0), psfNote + ' for the budget', psfCol],
+            ['Structure budget', money(m.cost.structure), Math.round((STYLE_MIX[p.style] || STYLE_MIX['Contemporary Villa']).structure * 100) + '% of total', 'text-sky-400'],
+            ['Rooftop solar', m.kw.toFixed(1) + ' kWp', '≈ ' + fmt(m.annualKwh) + ' kWh / year', 'text-emerald-400']
+        ].map(k => '<div class="glass-panel rounded-xl p-4 border border-slate-800"><div class="text-[11px] uppercase tracking-wider text-slate-400">' + k[0] + '</div><div class="text-2xl font-extrabold font-mono ' + k[3] + ' mt-1">' + k[1] + '</div><div class="text-[11px] text-slate-500 mt-0.5">' + k[2] + '</div></div>').join('');
+
+        $('boq-body').innerHTML = boqRows(m).map(r => '<tr><td class="p-2 text-slate-300">' + r[0] + '</td><td class="p-2 text-right text-white font-bold">' + r[1] + '</td><td class="p-2 text-slate-400">' + r[2] + '</td><td class="p-2 text-right ' + (r[3] === '—' ? 'text-slate-500' : 'text-amber-400 font-bold') + '">' + r[3] + '</td></tr>').join('');
+
+        const labels = ['Structure', 'Electrical & Plumbing', 'Finishing', 'Interior'];
+        const data = [m.cost.structure, m.cost.mep, m.cost.finishing, m.cost.interior];
+        $('pie-legend').innerHTML = labels.map((l, i) => '<div class="flex items-center justify-between bg-slate-900/70 rounded-lg px-2.5 py-1.5 border border-slate-800"><span class="flex items-center gap-1.5 text-slate-300"><span class="w-2.5 h-2.5 rounded-sm" style="background:' + PIE_COLORS[i] + '"></span>' + l + '</span><span class="font-mono text-white">' + money(data[i]) + '</span></div>').join('');
+        if (typeof Chart === 'undefined') { $('pie-fallback').classList.remove('hidden'); }
+        else if (budgetChart) { budgetChart.data.datasets[0].data = data; budgetChart.update(); }
+        else {
+            budgetChart = new Chart($('budget-pie').getContext('2d'), {
+                type: 'pie',
+                data: { labels, datasets: [{ data, backgroundColor: PIE_COLORS, borderColor: '#0f172a', borderWidth: 3, hoverOffset: 10 }] },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { color: '#cbd5e1', font: { family: 'Inter', size: 11 }, boxWidth: 12 } },
+                        tooltip: { callbacks: { label: (c) => { const tot = c.dataset.data.reduce((a, b) => a + b, 0); return ' ' + c.label + ': $' + Math.round(c.parsed).toLocaleString() + ' (' + Math.round(c.parsed / tot * 100) + '%)'; } } }
+                    },
+                    animation: { duration: 600 }
+                }
+            });
+        }
+
+        // sustainability
+        $('eco-orient').innerText = '· ' + p.orientation + ' · ' + p.style;
+        const shRating = m.shgi < 40 ? ['Excellent', 'text-emerald-400'] : (m.shgi < 60 ? ['Good', 'text-sky-400'] : (m.shgi < 75 ? ['Moderate', 'text-amber-400'] : ['High — add shading', 'text-red-400']));
+        const vRating = m.vent >= 78 ? ['Excellent', 'text-emerald-400'] : (m.vent >= 68 ? ['Good', 'text-sky-400'] : ['Needs cross-vents', 'text-amber-400']);
+        $('eco-cards').innerHTML =
+            '<div class="glass-panel rounded-2xl p-5 border border-slate-800 space-y-3"><div class="flex items-center gap-2 text-amber-400 text-sm font-bold"><i class="fa-solid fa-temperature-arrow-up"></i> Solar Heat Gain Index</div>' +
+            '<div class="flex items-end gap-2"><span class="text-4xl font-extrabold font-mono text-white">' + m.shgi + '</span><span class="text-xs text-slate-400 mb-1">/ 100 (lower is better)</span></div>' + scoreBar(m.shgi, '#10b981', '#ef4444') +
+            '<div class="text-xs ' + shRating[1] + ' font-semibold">' + shRating[0] + '</div><p class="text-[11px] text-slate-400">Glazing ratio ' + Math.round(m.glazeRatio * 100) + '% of façade area; ' + p.orientation.toLowerCase() + ' plot.</p></div>' +
+
+            '<div class="glass-panel rounded-2xl p-5 border border-slate-800 space-y-3"><div class="flex items-center gap-2 text-sky-400 text-sm font-bold"><i class="fa-solid fa-wind"></i> Natural Ventilation Score</div>' +
+            '<div class="flex items-end gap-2"><span class="text-4xl font-extrabold font-mono text-white">' + m.vent + '</span><span class="text-xs text-slate-400 mb-1">/ 100</span></div>' + scoreBar(m.vent, '#ef4444', '#10b981') +
+            '<div class="text-xs ' + vRating[1] + ' font-semibold">' + vRating[0] + '</div><p class="text-[11px] text-slate-400">Based on plot orientation, short-side depth (' + Math.min(p.length, p.width) + ' ft) and opening area.</p></div>' +
+
+            '<div class="glass-panel rounded-2xl p-5 border border-slate-800 space-y-3"><div class="flex items-center gap-2 text-emerald-400 text-sm font-bold"><i class="fa-solid fa-solar-panel"></i> Rooftop Solar Capacity</div>' +
+            '<div class="flex items-end gap-2"><span class="text-4xl font-extrabold font-mono text-white">' + m.kw.toFixed(1) + '</span><span class="text-xs text-slate-400 mb-1">kWp (~' + m.panels + ' × 400 W panels)</span></div>' + scoreBar(m.kw / 15 * 100, '#38bdf8', '#10b981') +
+            '<div class="text-xs text-emerald-400 font-semibold">≈ ' + fmt(m.annualKwh) + ' kWh / year</div><p class="text-[11px] text-slate-400">Usable roof ≈ ' + fmt(m.roofUsable) + ' sq ft (55% of footprint), ~1,550 kWh/kWp/yr, orientation factor applied.</p></div>';
+    }
+
+
+    // =====================================================
+    // 3D STUDIO — PROCEDURAL TEXTURES
+    // =====================================================
+    const TEX_DEFS = {
+        walls: [['stucco', 'Smooth Stucco'], ['brick', 'Exposed Brick'], ['concrete', 'Concrete Finish']],
+        floors: [['oak', 'Oak Hardwood'], ['marble', 'Marble Tiles'], ['polished', 'Polished Concrete']]
+    };
+    const WALL_PROPS = { stucco: { r: 0.95, m: 0 }, brick: { r: 0.9, m: 0 }, concrete: { r: 0.85, m: 0.05 } };
+    const FLOOR_PROPS = { oak: { r: 0.55, m: 0 }, marble: { r: 0.12, m: 0.1 }, polished: { r: 0.2, m: 0.2 } };
+    const texCanvasCache = {};
+
+    function getTexCanvas(kind) {
+        if (texCanvasCache[kind]) return texCanvasCache[kind];
+        const c = document.createElement('canvas'); c.width = c.height = 256;
+        const x = c.getContext('2d');
+        const speckle = (n, cols, size) => { for (let i = 0; i < n; i++) { x.fillStyle = cols[(Math.random() * cols.length) | 0]; x.fillRect(Math.random() * 256, Math.random() * 256, size, size); } };
+        if (kind === 'stucco') {
+            x.fillStyle = '#e8e2d5'; x.fillRect(0, 0, 256, 256);
+            speckle(3500, ['rgba(120,110,95,0.10)', 'rgba(255,255,255,0.35)', 'rgba(150,140,120,0.08)'], 2);
+        } else if (kind === 'brick') {
+            x.fillStyle = '#b3aba0'; x.fillRect(0, 0, 256, 256);
+            for (let r = 0; r < 8; r++) {
+                const off = (r % 2) * 32;
+                for (let cI = -1; cI < 5; cI++) {
+                    x.fillStyle = 'hsl(' + (8 + Math.random() * 10) + ',46%,' + (33 + Math.random() * 11) + '%)';
+                    x.fillRect(cI * 64 + off + 1.5, r * 32 + 1.5, 61, 29);
+                }
+            }
+            speckle(1500, ['rgba(0,0,0,0.08)', 'rgba(255,255,255,0.06)'], 2);
+        } else if (kind === 'concrete') {
+            x.fillStyle = '#9ca3af'; x.fillRect(0, 0, 256, 256);
+            speckle(5000, ['rgba(0,0,0,0.06)', 'rgba(255,255,255,0.08)', 'rgba(60,60,70,0.07)'], 2);
+            x.strokeStyle = 'rgba(0,0,0,0.22)'; x.lineWidth = 2;
+            x.beginPath(); x.moveTo(0, 128); x.lineTo(256, 128); x.moveTo(128, 0); x.lineTo(128, 256); x.stroke();
+            x.fillStyle = 'rgba(0,0,0,0.25)';
+            [[64, 64], [192, 64], [64, 192], [192, 192]].forEach(p => { x.beginPath(); x.arc(p[0], p[1], 3, 0, Math.PI * 2); x.fill(); });
+        } else if (kind === 'oak') {
+            for (let i = 0; i < 8; i++) {
+                x.fillStyle = 'hsl(' + (28 + Math.random() * 6) + ',' + (42 + Math.random() * 8) + '%,' + (36 + Math.random() * 10) + '%)';
+                x.fillRect(i * 32, 0, 32, 256);
+                x.strokeStyle = 'rgba(60,35,15,0.25)';
+                for (let g = 0; g < 14; g++) {
+                    const gx = i * 32 + 3 + Math.random() * 26; x.lineWidth = 0.6 + Math.random() * 0.6;
+                    x.beginPath(); x.moveTo(gx, 0); x.bezierCurveTo(gx + 3, 80, gx - 3, 170, gx + 1, 256); x.stroke();
+                }
+                x.fillStyle = 'rgba(30,15,5,0.55)'; x.fillRect(i * 32, 0, 1.5, 256);
+                const jy = Math.random() * 256; x.fillRect(i * 32, jy, 32, 1.5);
+            }
+        } else if (kind === 'marble') {
+            x.fillStyle = '#eef2f6'; x.fillRect(0, 0, 256, 256);
+            for (let v = 0; v < 14; v++) {
+                x.strokeStyle = 'rgba(100,116,139,' + (0.12 + Math.random() * 0.25) + ')'; x.lineWidth = 0.6 + Math.random() * 1.4;
+                x.beginPath(); const sx = Math.random() * 256, sy = Math.random() * 256; x.moveTo(sx, sy);
+                x.bezierCurveTo(sx + 60 * (Math.random() - 0.5), sy + 80, sx + 90 * (Math.random() - 0.5), sy + 120, sx + 40 * (Math.random() - 0.5), sy + 200); x.stroke();
+            }
+            x.strokeStyle = '#b6c0cc'; x.lineWidth = 3;
+            x.beginPath(); x.moveTo(0, 128); x.lineTo(256, 128); x.moveTo(128, 0); x.lineTo(128, 256); x.stroke();
+            x.strokeRect(0, 0, 256, 256);
+        } else { // polished concrete
+            const gr = x.createLinearGradient(0, 0, 256, 256); gr.addColorStop(0, '#6b7280'); gr.addColorStop(0.5, '#9aa1ac'); gr.addColorStop(1, '#707784');
+            x.fillStyle = gr; x.fillRect(0, 0, 256, 256);
+            speckle(2500, ['rgba(255,255,255,0.05)', 'rgba(0,0,0,0.05)'], 2);
+            x.strokeStyle = 'rgba(30,30,40,0.35)'; x.lineWidth = 1.5;
+            x.beginPath(); x.moveTo(0, 128); x.lineTo(256, 128); x.moveTo(128, 0); x.lineTo(128, 256); x.stroke();
+        }
+        texCanvasCache[kind] = c;
+        return c;
+    }
+
+    function buildPalettes() {
+        const mk = (arr, cid, fn, activeKind) => {
+            $(cid).innerHTML = arr.map(a => '<button type="button" data-kind="' + a[0] + '" onclick="' + fn + "('" + a[0] + "')" + '" class="swatch-btn' + (a[0] === activeKind ? ' active' : '') + '"><span class="block h-10 rounded-md border border-slate-700" style="background-image:url(' + getTexCanvas(a[0]).toDataURL() + ');background-size:cover"></span><span class="block mt-1 text-[10px] text-slate-300 leading-tight">' + a[1] + '</span></button>').join('');
+        };
+        mk(TEX_DEFS.walls, 'wall-palette', 'setWallMaterial', appState.wallTex);
+        mk(TEX_DEFS.floors, 'floor-palette', 'setFloorMaterial', appState.floorTex);
+    }
+    function markActive(cid, kind) {
+        $(cid).querySelectorAll('.swatch-btn').forEach(b => b.classList.toggle('active', b.dataset.kind === kind));
+    }
+    function setWallMaterial(kind) { appState.wallTex = kind; markActive('wall-palette', kind); applyMaterials(); }
+    function setFloorMaterial(kind) { appState.floorTex = kind; markActive('floor-palette', kind); applyMaterials(); }
+
+
+    // =====================================================
+    // 3D STUDIO — SCENE
+    // =====================================================
+    let threeScene, threeCamera, threeRenderer, threeControls, pointerControls, clock;
+    let exportRoot, houseGroup, roofGroup, furnitureGroup, labelGroup;
+    let dirLight, ambientLight, clipPlane, wallMat, floorMat;
+    let threeReady = false, labelsOn = true, sliceMax = 20;
+    const WALL_H = 6, BW = 24, BD = 18, SLAB = 0.2;
+    const colliders = [];
+    const threeTexCache = {};
+
+    // Partition walls: [x1, z1, x2, z2] (door gaps are the missing stretches)
+    const PARTS = [
+        [-4, -9, -4, -6], [-4, -3, -4, -1], [-12, -1, -4, -1],
+        [4, -9, 4, -6], [4, -3, 4, -1], [4, -1, 12, -1],
+        [-4, -1, -1.5, -1], [1.5, -1, 4, -1],
+        [-7, 3, -7, 5], [-7, 7.5, -7, 9], [-12, 3, -7, 3]
+    ];
+
+    function getThreeTex(kind) {
+        if (!threeTexCache[kind]) {
+            const t = new THREE.CanvasTexture(getTexCanvas(kind));
+            t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 8;
+            threeTexCache[kind] = t;
+        }
+        return threeTexCache[kind];
+    }
+    function M(color, o) {
+        return new THREE.MeshStandardMaterial(Object.assign({ color: color, roughness: 0.7, metalness: 0, clippingPlanes: [clipPlane], clipShadows: true, side: THREE.DoubleSide }, o || {}));
+    }
+    function applyMaterials() {
+        if (!wallMat || !floorMat) return;
+        const wp = WALL_PROPS[appState.wallTex], fp = FLOOR_PROPS[appState.floorTex];
+        wallMat.map = getThreeTex(appState.wallTex); wallMat.color.set(0xffffff); wallMat.roughness = wp.r; wallMat.metalness = wp.m; wallMat.needsUpdate = true;
+        floorMat.map = getThreeTex(appState.floorTex); floorMat.color.set(0xffffff); floorMat.roughness = fp.r; floorMat.metalness = fp.m; floorMat.needsUpdate = true;
+    }
+    function boxGeo(w, h, d, tile) {
+        const g = new THREE.BoxGeometry(w, h, d);
+        const uv = g.attributes.uv;
+        const dims = [[d, h], [d, h], [w, d], [w, d], [w, h], [w, h]];
+        for (let f = 0; f < 6; f++) {
+            for (let v = 0; v < 4; v++) {
+                const i = f * 4 + v;
+                uv.setXY(i, uv.getX(i) * dims[f][0] / tile, uv.getY(i) * dims[f][1] / tile);
+            }
+        }
+        uv.needsUpdate = true;
+        return g;
+    }
+    function bm(w, h, d, mat, x, y, z, parent) {
+        const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+        m.position.set(x, y, z); m.castShadow = true; m.receiveShadow = true;
+        if (parent) parent.add(m);
+        return m;
+    }
+    function clearGroup(g) {
+        while (g.children.length) {
+            const c = g.children.pop();
+            c.traverse(o => { if (o.geometry) o.geometry.dispose(); });
+        }
+    }
+    function makeLabel(text, w) {
+        const c = document.createElement('canvas'); c.width = 256; c.height = 64;
+        const x = c.getContext('2d');
+        x.fillStyle = 'rgba(15,23,42,0.78)'; x.fillRect(0, 0, 256, 64);
+        x.strokeStyle = '#38bdf8'; x.lineWidth = 2; x.strokeRect(1, 1, 254, 62);
+        x.fillStyle = '#e2e8f0'; x.font = 'bold 26px Inter, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
+        x.fillText(text, 128, 33);
+        const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false }));
+        s.scale.set(w, w / 4, 1);
+        return s;
+    }
+
+    function wallSeg(parent, x1, z1, x2, z2, yBase, height, thick) {
+        const horiz = Math.abs(z2 - z1) < 1e-6;
+        const len = horiz ? Math.abs(x2 - x1) : Math.abs(z2 - z1);
+        const w = horiz ? len : thick, d = horiz ? thick : len;
+        const m = new THREE.Mesh(boxGeo(w, height, d, 6), wallMat);
+        const cx = (x1 + x2) / 2, cz = (z1 + z2) / 2;
+        m.position.set(cx, yBase + height / 2, cz); m.castShadow = true; m.receiveShadow = true;
+        parent.add(m);
+        return { minX: cx - w / 2, maxX: cx + w / 2, minZ: cz - d / 2, maxZ: cz + d / 2 };
+    }
+
+    function buildHouse() {
+        const floors = appState.projectData.floors, style = appState.projectData.style;
+        const hw = BW / 2, hd = BD / 2;
+        clearGroup(houseGroup); clearGroup(roofGroup); clearGroup(labelGroup);
+        colliders.length = 0;
+
+        const glassMat = M(0x7dd3fc, { roughness: 0.1, metalness: 0.3, transparent: true, opacity: 0.55 });
+        const woodMat = M(0xb7791f, { roughness: 0.6 });
+
+        for (let f = 0; f < floors; f++) {
+            const y0 = f * WALL_H;
+            const slab = new THREE.Mesh(boxGeo(BW, SLAB, BD, 4), floorMat);
+            slab.position.set(0, y0 + SLAB / 2, 0); slab.receiveShadow = true; slab.castShadow = true;
+            houseGroup.add(slab);
+
+            const yb = y0 + SLAB, hh = WALL_H - SLAB;
+            wallSeg(houseGroup, -hw, -hd, hw, -hd, yb, hh, 0.5);
+            wallSeg(houseGroup, -hw, -hd, -hw, hd, yb, hh, 0.5);
+            wallSeg(houseGroup, hw, -hd, hw, hd, yb, hh, 0.5);
+            if (f === 0) {
+                wallSeg(houseGroup, -hw, hd, -2, hd, yb, hh, 0.5);
+                wallSeg(houseGroup, 2, hd, hw, hd, yb, hh, 0.5);
+                wallSeg(houseGroup, -2, hd, 2, hd, yb + 4.4, hh - 4.4, 0.5);
+                bm(7, 0.25, 3, woodMat, 0, yb + 4.5, hd + 1.6, houseGroup);
+            } else {
+                wallSeg(houseGroup, -hw, hd, hw, hd, yb, hh, 0.5);
+            }
+            PARTS.forEach(p => {
+                const box = wallSeg(houseGroup, p[0], p[1], p[2], p[3], yb, hh, 0.35);
+                if (f === 0) colliders.push(box);
+            });
+            // glass panels (exterior)
+            [-7, 7].forEach(x => bm(5, 3.2, 0.12, glassMat, x, y0 + 3.5, hd + 0.3, houseGroup));
+            [-5].forEach(z => { bm(0.12, 3.2, 5, glassMat, -hw - 0.3, y0 + 3.5, z, houseGroup); bm(0.12, 3.2, 5, glassMat, hw + 0.3, y0 + 3.5, z, houseGroup); });
+        }
+
+        // Roof
+        const topY = floors * WALL_H;
+        const roofMat = M(style === 'Neo-Classical' ? 0xb45309 : 0x334155, { roughness: 0.5 });
+        if (style === 'Neo-Classical') {
+            const ceil = new THREE.Mesh(boxGeo(BW, 0.3, BD, 4), floorMat);
+            ceil.position.set(0, topY + 0.15, 0); roofGroup.add(ceil);
+            const sh = new THREE.Shape();
+            sh.moveTo(-(BD / 2 + 1.2), 0); sh.lineTo(BD / 2 + 1.2, 0); sh.lineTo(0, 5); sh.lineTo(-(BD / 2 + 1.2), 0);
+            const gg = new THREE.ExtrudeGeometry(sh, { depth: BW + 2.4, bevelEnabled: false });
+            gg.translate(0, 0, -(BW + 2.4) / 2);
+            const gable = new THREE.Mesh(gg, roofMat);
+            gable.rotation.y = Math.PI / 2; gable.position.y = topY + 0.3; gable.castShadow = true; gable.receiveShadow = true;
+            roofGroup.add(gable);
+        } else {
+            bm(BW + 1.6, 0.5, BD + 1.6, roofMat, 0, topY + 0.25, 0, roofGroup);
+            const pm = M(0xe2e8f0, { roughness: 0.8 });
+            const py = topY + 0.5 + 0.45, ox = (BW + 1.0) / 2, oz = (BD + 1.0) / 2;
+            bm(BW + 1.0, 0.9, 0.3, pm, 0, py, -oz, roofGroup); bm(BW + 1.0, 0.9, 0.3, pm, 0, py, oz, roofGroup);
+            bm(0.3, 0.9, BD + 1.0, pm, -ox, py, 0, roofGroup); bm(0.3, 0.9, BD + 1.0, pm, ox, py, 0, roofGroup);
+            const panelMat = M(0x1d4ed8, { roughness: 0.25, metalness: 0.5 });
+            for (let r = 0; r < 2; r++) for (let c = 0; c < 4; c++) {
+                const pnl = bm(4.2, 0.12, 2.4, panelMat, -7.5 + c * 5, topY + 0.5 + 0.55, -2.5 + r * 4, roofGroup);
+                pnl.rotation.x = -0.35;
+            }
+        }
+
+        // labels (ground floor)
+        [['Master Bedroom', -8, -5, 6], ['Kitchen', 0, -5, 4.6], ['Bedroom 2', 8, -5, 5], ['Living & Dining', 2, 4, 6.5], ['Bath / Utility', -9.5, 6, 5]].forEach(l => {
+            const s = makeLabel(l[0], l[3]); s.position.set(l[1], 2.2, l[2]); labelGroup.add(s);
+        });
+        labelGroup.visible = labelsOn;
+        roofGroup.visible = appState.roofVisible;
+
+        sliceMax = floors * WALL_H + 9;
+        const sl = $('slice-slider');
+        sl.max = sliceMax; sl.value = sliceMax;
+        setSlice(sliceMax);
+        houseDirty = false;
+    }
+
+    // ---------- furniture ----------
+    const FURN_DEFS = {
+        sofa:   { label: 'Sofa',           icon: 'fa-couch',       pos: [1, 3.5],   half: [3.6, 1.7] },
+        bed:    { label: 'Bed',            icon: 'fa-bed',         pos: [-8.5, -5.2], half: [2.8, 3.5] },
+        table:  { label: 'Dining Table',   icon: 'fa-utensils',    pos: [5, 5.5],   half: [3.4, 2.2] },
+        island: { label: 'Kitchen Island', icon: 'fa-kitchen-set', pos: [0, -5.5],  half: [3.3, 1.8] }
+    };
+    const furnMap = {};
+    let furnEdit = true, selectedFurn = null, draggingFurn = null;
+
+    function buildFurniture(key) {
+        const g = new THREE.Group();
+        if (key === 'sofa') {
+            const fab = M(0x475569), dark = M(0x334155);
+            bm(7, 1.2, 3, fab, 0, 0.6, 0, g); bm(7, 1.7, 0.7, dark, 0, 1.45, -1.15, g);
+            bm(0.7, 1.7, 3, dark, -3.15, 1.0, 0, g); bm(0.7, 1.7, 3, dark, 3.15, 1.0, 0, g);
+            bm(2.5, 0.4, 2.2, M(0x64748b), -1.4, 1.4, 0.2, g); bm(2.5, 0.4, 2.2, M(0x64748b), 1.4, 1.4, 0.2, g);
+        } else if (key === 'bed') {
+            bm(5.2, 1.0, 6.6, M(0xa16207), 0, 0.5, 0, g); bm(5, 0.7, 6.2, M(0xf1f5f9), 0, 1.3, 0.1, g);
+            bm(5.2, 2.4, 0.3, M(0x854d0e), 0, 1.4, -3.3, g);
+            bm(2, 0.4, 1.1, M(0xffffff), -1.2, 1.8, -2.4, g); bm(2, 0.4, 1.1, M(0xffffff), 1.2, 1.8, -2.4, g);
+            bm(5, 0.2, 3.2, M(0x38bdf8), 0, 1.7, 1.2, g);
+        } else if (key === 'table') {
+            const wd = M(0x92400e);
+            bm(6, 0.25, 3, wd, 0, 2.4, 0, g);
+            [[-2.7, -1.2], [2.7, -1.2], [-2.7, 1.2], [2.7, 1.2]].forEach(p => bm(0.3, 2.3, 0.3, wd, p[0], 1.15, p[1], g));
+            [[-1.8, -2.1, 0], [0, -2.1, 0], [1.8, -2.1, 0], [-1.8, 2.1, 1], [0, 2.1, 1], [1.8, 2.1, 1]].forEach(p => {
+                bm(1.1, 0.15, 1.1, M(0x475569), p[0], 1.4, p[1], g);
+                bm(1.1, 1.1, 0.12, M(0x475569), p[0], 2.0, p[1] + (p[2] ? 0.5 : -0.5), g);
+                bm(0.15, 1.4, 0.15, M(0x1e293b), p[0], 0.7, p[1], g);
+            });
+        } else {
+            bm(6, 2.8, 3, M(0x1e293b), 0, 1.4, 0, g); bm(6.4, 0.25, 3.4, M(0xf8fafc, { roughness: 0.15 }), 0, 2.93, 0, g);
+            [-2, 0, 2].forEach(x => { const st = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 0.15, 16), M(0x92400e)); st.position.set(x, 2.2, 2.2); st.castShadow = true; g.add(st); bm(0.12, 2.1, 0.12, M(0x1e293b), x, 1.05, 2.2, g); });
+        }
+        g.userData.isFurniture = true; g.userData.key = key;
+        return g;
+    }
+    function buildFurnButtons() {
+        $('furn-buttons').innerHTML = Object.keys(FURN_DEFS).map(k => '<button type="button" id="furn-btn-' + k + '" onclick="toggleFurniture(\'' + k + '\')" class="py-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-[11px] text-slate-200 flex items-center justify-center gap-1.5"><i class="fa-solid ' + FURN_DEFS[k].icon + ' text-purple-400"></i> ' + FURN_DEFS[k].label + '</button>').join('');
+    }
+    function toggleFurniture(key) {
+        if (!threeReady) { showToast('Open the 3D Studio first'); return; }
+        const btn = $('furn-btn-' + key);
+        if (furnMap[key]) {
+            if (selectedFurn === furnMap[key]) selectFurn(null);
+            furnitureGroup.remove(furnMap[key]); delete furnMap[key];
+            btn.classList.remove('layer-active');
+        } else {
+            const g = buildFurniture(key); const d = FURN_DEFS[key];
+            g.position.set(d.pos[0], SLAB, d.pos[1]);
+            furnitureGroup.add(g); furnMap[key] = g; btn.classList.add('layer-active');
+            selectFurn(g);
+        }
+    }
+    function resetFurniture() {
+        Object.keys(furnMap).forEach(k => { furnitureGroup.remove(furnMap[k]); delete furnMap[k]; const b = $('furn-btn-' + k); if (b) b.classList.remove('layer-active'); });
+        selectedFurn = null;
+    }
+    function toggleFurnEdit() {
+        furnEdit = !furnEdit;
+        $('furn-edit-btn').innerText = 'Drag mode: ' + (furnEdit ? 'ON' : 'OFF');
+        if (!furnEdit) selectFurn(null);
+    }
+    function selectFurn(g) {
+        if (selectedFurn) selectedFurn.traverse(o => { if (o.isMesh && o.material.emissive) o.material.emissive.setHex(0x000000); });
+        selectedFurn = g;
+        if (g) g.traverse(o => { if (o.isMesh && o.material.emissive) o.material.emissive.setHex(0x0b4a6e); });
+    }
+    function rotateSelectedFurniture() {
+        if (!selectedFurn) { showToast('Select a furniture piece first'); return; }
+        selectedFurn.rotation.y += Math.PI / 2;
+        clampFurn(selectedFurn);
+    }
+    function clampFurn(g) {
+        const d = FURN_DEFS[g.userData.key];
+        const rotated = Math.abs(Math.round(g.rotation.y / (Math.PI / 2))) % 2 === 1;
+        const hx = rotated ? d.half[1] : d.half[0], hz = rotated ? d.half[0] : d.half[1];
+        g.position.x = clamp(g.position.x, -BW / 2 + 0.7 + hx, BW / 2 - 0.7 - hx);
+        g.position.z = clamp(g.position.z, -BD / 2 + 0.7 + hz, BD / 2 - 0.7 - hz);
+        g.position.y = SLAB;
+    }
+
+    // created lazily in initThree3DStudio so the page still works if the CDN is unreachable
+    let raycaster, ndc, dragPlane, dragOff, hitPt, _fwd;
+    function setRay(e) {
+        const r = threeRenderer.domElement.getBoundingClientRect();
+        ndc.x = ((e.clientX - r.left) / r.width) * 2 - 1; ndc.y = -((e.clientY - r.top) / r.height) * 2 + 1;
+        raycaster.setFromCamera(ndc, threeCamera);
+    }
+    function rootFurn(o) { while (o && !(o.userData && o.userData.isFurniture)) o = o.parent; return o; }
+    function onFurnDown(e) {
+        if (!furnEdit || walkActive || e.button !== 0 || !furnitureGroup.children.length) return;
+        setRay(e);
+        const hits = raycaster.intersectObjects(furnitureGroup.children, true);
+        if (!hits.length) { selectFurn(null); return; }
+        const root = rootFurn(hits[0].object); if (!root) return;
+        selectFurn(root); draggingFurn = root; threeControls.enabled = false;
+        if (raycaster.ray.intersectPlane(dragPlane, hitPt)) dragOff.copy(root.position).sub(hitPt);
+        try { threeRenderer.domElement.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+    }
+    function onFurnMove(e) {
+        if (walkActive) return;
+        if (draggingFurn) {
+            setRay(e);
+            if (raycaster.ray.intersectPlane(dragPlane, hitPt)) {
+                draggingFurn.position.set(snap(hitPt.x + dragOff.x, 0.25), SLAB, snap(hitPt.z + dragOff.z, 0.25));
+                clampFurn(draggingFurn);
+            }
+        } else if (furnEdit && furnitureGroup.children.length) {
+            setRay(e);
+            threeRenderer.domElement.style.cursor = raycaster.intersectObjects(furnitureGroup.children, true).length ? 'grab' : '';
+        }
+    }
+    function onFurnUp(e) {
+        if (!draggingFurn) return;
+        draggingFurn = null; threeControls.enabled = !walkActive;
+        try { threeRenderer.domElement.releasePointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+    }
+
+    // ---------- init ----------
+    function initThree3DStudio() {
+        const container = $('three-canvas-container');
+        if (!container) return;
+        if (threeReady) {
+            onResize3D();
+            if (houseDirty) buildHouse();
+            return;
+        }
+        if (typeof THREE === 'undefined' || !THREE.OrbitControls) { showToast('3D engine failed to load (check internet connection)'); return; }
+
+        const width = container.clientWidth || 800, height = container.clientHeight || 520;
+        raycaster = new THREE.Raycaster(); ndc = new THREE.Vector2();
+        dragPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -SLAB);
+        dragOff = new THREE.Vector3(); hitPt = new THREE.Vector3(); _fwd = new THREE.Vector3();
+        threeScene = new THREE.Scene(); threeScene.background = new THREE.Color(0x1e3a5f);
+        threeCamera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
+        threeCamera.position.set(32, 24, 38);
+        threeRenderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+        threeRenderer.setSize(width, height);
+        threeRenderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+        threeRenderer.shadowMap.enabled = true; threeRenderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        threeRenderer.localClippingEnabled = true;
+        container.appendChild(threeRenderer.domElement);
+
+        threeControls = new THREE.OrbitControls(threeCamera, threeRenderer.domElement);
+        threeControls.enableDamping = true; threeControls.target.set(0, 4, 0); threeControls.update();
+        clock = new THREE.Clock();
+
+        clipPlane = new THREE.Plane(new THREE.Vector3(0, -1, 0), 1000);
+
+        ambientLight = new THREE.AmbientLight(0xffffff, 0.5); threeScene.add(ambientLight);
+        dirLight = new THREE.DirectionalLight(0xfffaed, 0.95);
+        dirLight.position.set(0, 30, 10); dirLight.castShadow = true;
+        dirLight.shadow.mapSize.set(2048, 2048);
+        const sc = dirLight.shadow.camera; sc.left = -35; sc.right = 35; sc.top = 35; sc.bottom = -35; sc.near = 1; sc.far = 120;
+        threeScene.add(dirLight);
+
+        const ground = new THREE.Mesh(new THREE.BoxGeometry(56, 0.5, 56), new THREE.MeshStandardMaterial({ color: 0x1f3b2e, roughness: 1 }));
+        ground.position.y = -0.25; ground.receiveShadow = true; threeScene.add(ground);
+        const plot = new THREE.Mesh(new THREE.BoxGeometry(40, 0.1, 34), new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.9 }));
+        plot.position.y = 0.0; plot.receiveShadow = true; threeScene.add(plot);
+
+        wallMat = M(0xffffff); floorMat = M(0xffffff);
+        applyMaterials();
+
+        exportRoot = new THREE.Group(); threeScene.add(exportRoot);
+        houseGroup = new THREE.Group(); roofGroup = new THREE.Group(); furnitureGroup = new THREE.Group(); labelGroup = new THREE.Group();
+        exportRoot.add(houseGroup); exportRoot.add(roofGroup); exportRoot.add(furnitureGroup);
+        threeScene.add(labelGroup);
+
+        pointerControls = new THREE.PointerLockControls(threeCamera, threeRenderer.domElement);
+        pointerControls.addEventListener('unlock', () => { if (walkActive && !walkFallback) exitWalkthrough(); });
+        document.addEventListener('pointerlockerror', () => { if (walkActive) { walkFallback = true; $('walk-fallback').classList.remove('hidden'); } });
+
+        const dom = threeRenderer.domElement;
+        dom.addEventListener('pointerdown', onFurnDown);
+        dom.addEventListener('pointermove', onFurnMove);
+        dom.addEventListener('pointerup', onFurnUp);
+        dom.addEventListener('pointermove', onFallbackLook);
+        window.addEventListener('resize', onResize3D);
+
+        buildFurnButtons();
+        buildHouse();
+        updateSolarAngle($('solar-slider').value);
+        threeReady = true;
+
+        (function animate3D() {
+            requestAnimationFrame(animate3D);
+            if (appState.currentModule !== 'viewer3d') return;
+            const dt = Math.min(clock.getDelta(), 0.05);
+            if (walkActive) updateWalk(dt); else if (threeControls) threeControls.update();
+            threeRenderer.render(threeScene, threeCamera);
+        })();
+    }
+    function onResize3D() {
+        const c = $('three-canvas-container');
+        if (!c || !threeRenderer || !c.clientWidth) return;
+        threeCamera.aspect = c.clientWidth / c.clientHeight; threeCamera.updateProjectionMatrix();
+        threeRenderer.setSize(c.clientWidth, c.clientHeight);
+    }
+
+    function setCameraPreset(view) {
+        if (!threeCamera || !threeControls) return;
+        if (walkActive) exitWalkthrough();
+        if (view === 'iso') threeCamera.position.set(32, 24, 38);
+        else if (view === 'front') threeCamera.position.set(0, 6, 42);
+        else if (view === 'top') threeCamera.position.set(0, 52, 0.1);
+        threeControls.target.set(0, 3, 0); threeControls.update();
+    }
+    function toggleRoofVisibility() {
+        if (!roofGroup) return;
+        appState.roofVisible = !appState.roofVisible;
+        roofGroup.visible = appState.roofVisible;
+    }
+    function toggleLabels(on) { labelsOn = on; if (labelGroup) labelGroup.visible = on; }
+
+    function fmtTime(v) {
+        v = parseFloat(v); let h = Math.floor(v), m = Math.round((v - h) * 60);
+        const ap = h >= 12 ? 'PM' : 'AM'; let hh = h % 12; if (hh === 0) hh = 12;
+        return hh + ':' + (m < 10 ? '0' : '') + m + ' ' + ap;
+    }
+    function updateSolarAngle(val) {
+        $('solar-time-label').innerText = fmtTime(val);
+        if (!dirLight) return;
+        const a = (parseFloat(val) - 6) / 14 * Math.PI, s = Math.sin(a);
+        dirLight.position.set(34 * Math.cos(a), Math.max(4, 34 * s), 12);
+        dirLight.intensity = 0.2 + 0.95 * Math.max(0, s);
+        dirLight.color.setHSL(0.1 + 0.02 * s, 0.7 - 0.55 * s, 0.7 + 0.2 * s);
+        ambientLight.intensity = 0.28 + 0.3 * s;
+        threeScene.background.setRGB(0.06 + 0.09 * s, 0.1 + 0.2 * s, 0.17 + 0.3 * s);
+    }
+
+    // ---------- floor cut-section ----------
+    function setSlice(v) {
+        v = parseFloat(v);
+        if (clipPlane) clipPlane.constant = (v >= sliceMax - 0.05) ? 1000 : v;
+        $('slice-label').innerText = (v >= sliceMax - 0.05) ? 'Full Building' : v.toFixed(1) + ' ft';
+        $('slice-slider').value = v;
+    }
+    function setSlicePreset(p) { setSlice(p === 'plan' ? 3.5 : sliceMax); }
+
+    // ---------- walkthrough ----------
+    let walkActive = false, walkFallback = false, savedCam = null, lookDrag = false;
+    const keys = { w: false, a: false, s: false, d: false };
+    function startWalkthrough() {
+        if (!threeReady) { showToast('Open the 3D Studio first'); return; }
+        if (walkActive) return;
+        walkActive = true; walkFallback = false;
+        $('walk-fallback').classList.add('hidden');
+        savedCam = { pos: threeCamera.position.clone(), target: threeControls.target.clone() };
+        threeControls.enabled = false; selectFurn(null);
+        setSlice(sliceMax);
+        threeCamera.fov = 72; threeCamera.updateProjectionMatrix();
+        threeCamera.position.set(0, SLAB + 5.3, 6.5);
+        threeCamera.rotation.order = 'YXZ'; threeCamera.rotation.set(0, 0, 0);
+        $('walk-hud').classList.remove('hidden'); $('orbit-hint').classList.add('hidden');
+        try { pointerControls.lock(); } catch (e) { walkFallback = true; $('walk-fallback').classList.remove('hidden'); }
+        sfx.toggle();
+    }
+    function exitWalkthrough() {
+        if (!walkActive) return;
+        walkActive = false; lookDrag = false;
+        Object.keys(keys).forEach(k => keys[k] = false);
+        try { if (pointerControls && pointerControls.isLocked) pointerControls.unlock(); } catch (e) { /* ignore */ }
+        threeCamera.fov = 45; threeCamera.updateProjectionMatrix();
+        if (savedCam) { threeCamera.position.copy(savedCam.pos); threeControls.target.copy(savedCam.target); }
+        threeControls.enabled = true; threeControls.update();
+        $('walk-hud').classList.add('hidden'); $('orbit-hint').classList.remove('hidden');
+    }
+    function onFallbackLook(e) {
+        if (!walkActive || !walkFallback || e.buttons !== 1) return;
+        threeCamera.rotation.order = 'YXZ';
+        threeCamera.rotation.y -= e.movementX * 0.003;
+        threeCamera.rotation.x = clamp(threeCamera.rotation.x - e.movementY * 0.003, -1.3, 1.3);
+    }
+    function collides(x, z) {
+        const r = 0.55;
+        if (Math.abs(x) > BW / 2 - 0.9 || Math.abs(z) > BD / 2 - 0.9) return true;
+        for (let i = 0; i < colliders.length; i++) {
+            const b = colliders[i];
+            if (x > b.minX - r && x < b.maxX + r && z > b.minZ - r && z < b.maxZ + r) return true;
+        }
+        return false;
+    }
+    function updateWalk(dt) {
+        threeCamera.getWorldDirection(_fwd); _fwd.y = 0;
+        if (_fwd.lengthSq() < 1e-6) return;
+        _fwd.normalize();
+        const rx = -_fwd.z, rz = _fwd.x;
+        let mx = 0, mz = 0;
+        if (keys.w) { mx += _fwd.x; mz += _fwd.z; }
+        if (keys.s) { mx -= _fwd.x; mz -= _fwd.z; }
+        if (keys.d) { mx += rx; mz += rz; }
+        if (keys.a) { mx -= rx; mz -= rz; }
+        const len = Math.hypot(mx, mz);
+        if (!len) return;
+        const sp = 7 * dt; mx = mx / len * sp; mz = mz / len * sp;
+        const p = threeCamera.position;
+        if (!collides(p.x + mx, p.z)) p.x += mx;
+        if (!collides(p.x, p.z + mz)) p.z += mz;
+        p.y = SLAB + 5.3;
+    }
+    const KEYMAP = { w: 'w', a: 'a', s: 's', d: 'd', arrowup: 'w', arrowleft: 'a', arrowdown: 's', arrowright: 'd' };
+    document.addEventListener('keydown', (e) => {
+        const tag = (e.target && e.target.tagName) || '';
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+        const k = e.key.toLowerCase();
+        if (walkActive) {
+            if (KEYMAP[k]) { keys[KEYMAP[k]] = true; if (k.indexOf('arrow') === 0) e.preventDefault(); }
+            if (k === 'escape') exitWalkthrough();
+        } else if (k === 'r' && appState.currentModule === 'viewer3d' && selectedFurn) {
+            rotateSelectedFurniture();
+        }
+    });
+    document.addEventListener('keyup', (e) => { const k = KEYMAP[e.key.toLowerCase()]; if (k) keys[k] = false; });
+
+    // ---------- 3D exports ----------
+    function ensure3D(cb) {
+        if (threeReady) { cb(); return; }
+        navigateTo('viewer3d');
+        let tries = 0;
+        const t = setInterval(() => { tries++; if (threeReady) { clearInterval(t); cb(); } else if (tries > 20) { clearInterval(t); showToast('3D studio could not start'); } }, 150);
+    }
+    function export3dModelSnapshot() {
+        ensure3D(() => {
+            threeRenderer.render(threeScene, threeCamera);
+            threeRenderer.domElement.toBlob(b => downloadBlob(b, 'ArchiTech-3D-Model-Snapshot.png'), 'image/png');
+            fxDownload(); showToast('3D snapshot exported');
+        });
+    }
+    function exportOBJ() {
+        ensure3D(() => {
+            if (!THREE.OBJExporter) { showToast('OBJ exporter failed to load'); return; }
+            if (houseDirty) buildHouse();
+            exportRoot.updateMatrixWorld(true);
+            const wasRoof = roofGroup.visible; roofGroup.visible = true;
+            const obj = new THREE.OBJExporter().parse(exportRoot);
+            roofGroup.visible = wasRoof;
+            downloadBlob(new Blob([obj], { type: 'text/plain' }), 'ArchiTech-3D-Model.obj');
+            fxDownload(); showToast('OBJ geometry exported (building + furniture, no materials)');
+        });
+    }
+
+
+    // =====================================================
+    // COMPARISON MODAL
+    // =====================================================
+    function openComparisonModal() { const m = $('compare-modal'); m.classList.remove('hidden'); m.classList.add('flex'); }
+    function closeComparisonModal() { const m = $('compare-modal'); m.classList.add('hidden'); m.classList.remove('flex'); }
+
+
+    // =====================================================
+    // ARCHIBOT
+    // =====================================================
+    let botOpen = false, botGreeted = false, botBusy = false;
+    const ORI_TIPS = {
+        'North Facing': 'North-facing front gets soft, glare-free diffused light all day. Put living / study toward the front with larger windows, give the kitchen an east window for morning sun, and keep west openings small and shaded.',
+        'East Facing': 'East-facing front floods with gentle morning sun. Keep bedrooms and kitchen toward the front, but protect the west (rear) side with deep overhangs, trees or louvres to cut afternoon heat.',
+        'South Facing': 'South light is strongest in winter. Use 2–3 ft overhangs so the high summer sun is blocked while low winter sun enters; keep the main living space along the south side.',
+        'West Facing': 'West-facing fronts catch harsh afternoon glare and heat. Minimise west glazing, use vertical louvres or a deep verandah, and place garage / storage / baths on the west as a buffer. Open living rooms to east or north light instead.'
+    };
+    const VASTU_ENTRANCE = {
+        'North Facing': 'North or North-East part of the front wall',
+        'East Facing': 'East or North-East part of the front wall',
+        'South Facing': 'South-East end of the front wall (towards the east)',
+        'West Facing': 'West or North-West part of the front wall'
+    };
+    const VASTU_IDEAL = {
+        master: ['SW'], kitchen: ['SE', 'NW'], living: ['N', 'NE', 'E'], ensuite: ['NW', 'W'], bed2: ['W', 'NW', 'S'], garage: ['NW', 'SE']
+    };
+    function zoneOf(r) {
+        const P = appState.projectData;
+        const cx = (r.x + r.w / 2) / P.width, cy = (r.y + r.h / 2) / P.length;
+        const col = cx < 0.33 ? 'W' : (cx > 0.66 ? 'E' : ''), row = cy < 0.33 ? 'N' : (cy > 0.66 ? 'S' : '');
+        return (row + col) || 'Center';
+    }
+    function botTitle(t) { return '<div class="font-semibold text-blueprint-400 mb-1.5">' + t + '</div>'; }
+
+    function replyDaylight() {
+        const p = appState.projectData;
+        const deep = rooms.filter(r => Math.max(r.w, r.h) > 20).map(r => esc(r.name) + ' (' + fmtFt(Math.max(r.w, r.h)) + ' deep)');
+        return botTitle('Daylight optimisation · ' + esc(p.orientation)) +
+            '<ul class="list-disc pl-4 space-y-1.5">' +
+            '<li>' + (ORI_TIPS[p.orientation] || ORI_TIPS['North Facing']) + '</li>' +
+            '<li>Keep habitable rooms within ~15–20 ft of a window wall.' + (deep.length ? ' In your current plan these run deep: ' + deep.join(', ') + ' — add a courtyard, clerestory or skylight.' : ' Your current room depths look fine.') + '</li>' +
+            '<li>Set window head heights near ceiling level (about 7–8 ft): light reaches roughly twice that height into the room.</li>' +
+            '<li>Use light-coloured walls/ceilings and a light shelf or reflective sill on sun-facing windows to bounce daylight deeper.</li>' +
+            '<li>Place garage / storage / bath on the side with the least useful light so living areas get the best exposure.</li>' +
+            '<li>Try the <b>Solar Study</b> slider in the 3D Studio to preview sun and shadows through the day.</li></ul>';
+    }
+    function replyVastu() {
+        const p = appState.projectData;
+        const checks = rooms.map(r => {
+            const z = zoneOf(r), ok = (VASTU_IDEAL[r.id] || []).indexOf(z) >= 0;
+            return '<li>' + (ok ? '<span class="text-emerald-400">✔</span> ' : '<span class="text-amber-400">⚠</span> ') + esc(r.name) + ': currently <b>' + z + '</b>' + (ok ? ' — matches the traditional guideline.' : ' — traditionally better in ' + (VASTU_IDEAL[r.id] || ['—']).join(' / ') + '.') + '</li>';
+        }).join('');
+        return botTitle('Vastu / Feng Shui · ' + esc(p.orientation)) +
+            '<div class="text-[11px] text-slate-400 mb-1.5">Assumes the top of the 2D plan is North.</div>' +
+            '<div class="font-semibold text-slate-200 mb-1">Your current plan</div><ul class="space-y-1 mb-2">' + checks + '</ul>' +
+            '<div class="font-semibold text-slate-200 mb-1">Vastu guidelines</div><ul class="list-disc pl-4 space-y-1">' +
+            '<li>Main entrance: ' + (VASTU_ENTRANCE[p.orientation] || 'N / NE') + '.</li>' +
+            '<li>Living / prayer / water elements: North-East, North or East.</li><li>Kitchen: South-East (alternative North-West).</li>' +
+            '<li>Master bedroom: South-West; children / guest rooms: West or North-West.</li>' +
+            '<li>Toilets: North-West or West, never in the North-East. Keep the centre (Brahmasthan) open and light.</li></ul>' +
+            '<div class="font-semibold text-slate-200 mt-2 mb-1">Feng Shui basics</div><ul class="list-disc pl-4 space-y-1">' +
+            '<li>Avoid a front door in a straight line with the back door or a staircase.</li><li>Place the bed in the "command position": diagonal to the door, solid wall behind the headboard.</li>' +
+            '<li>Keep the kitchen out of direct view from the entrance; keep the entry bright and clutter-free.</li></ul>' +
+            '<div class="text-[11px] text-slate-500 mt-2">These are traditional guidelines, not structural or legal advice. Swap rooms in the 2D editor and re-run to re-check.</div>';
+    }
+    function replyBudget() {
+        const p = appState.projectData, m = computeMetrics();
+        const cutGlaze = m.glazing * 0.25;
+        return botTitle('Low-budget structural modifications · ' + money(p.budget)) +
+            '<div class="text-[11px] text-slate-400 mb-1.5">Current rate ≈ $' + m.psf.toFixed(0) + ' per built-up sq ft (' + fmt(m.builtUp) + ' sq ft). Savings below are typical ranges — confirm with local quotes.</div>' +
+            '<ul class="list-disc pl-4 space-y-1.5">' +
+            '<li><b>Compact rectangular footprint</b> — fewer corners and a shorter perimeter cut wall, foundation and finishing cost. Current perimeter ≈ ' + fmt(m.perim) + ' ft.</li>' +
+            '<li><b>Trim glazing by ~25%</b> (≈ ' + fmt(cutGlaze) + ' sq ft) — glass and aluminium frames are among the dearest façade items, and it also lowers heat gain.</li>' +
+            '<li><b>Standardise structural spans to ≤ 12–14 ft</b> so slabs and beams stay slim and rebar quantities (~' + fmt(m.rebarLb) + ' lb now) drop.</li>' +
+            '<li><b>Stack wet areas</b> (kitchen, baths, utility) on shared walls: shorter plumbing runs reduce the ' + money(m.plumbing) + ' rough-in budget.</li>' +
+            '<li><b>Lighter walling</b> — AAC / fly-ash blocks instead of heavy masonry reduce dead load and labour; keep exposed brick or concrete finishes where you want a no-plaster look.</li>' +
+            '<li><b>Phase the build</b> — complete the ground floor and foundations for ' + p.floors + ' storeys first, finish upper floors later.</li>' +
+            '<li><b>Finishes</b> — spend on kitchen and baths, choose standard tile sizes and paint elsewhere (finishing + interior ≈ ' + money(m.cost.finishing + m.cost.interior) + ').</li></ul>';
+    }
+    function replySolar() {
+        const m = computeMetrics();
+        return botTitle('Solar & sustainability snapshot') + '<ul class="list-disc pl-4 space-y-1"><li>Rooftop capacity ≈ <b>' + m.kw.toFixed(1) + ' kWp</b> (~' + m.panels + ' panels), ≈ ' + fmt(m.annualKwh) + ' kWh / year.</li><li>Heat gain index ' + m.shgi + '/100, ventilation score ' + m.vent + '/100.</li><li>See the <b>Analytics</b> tab for the full score card.</li></ul>';
+    }
+    function replyHelp() {
+        return 'I can help with <b>daylight</b>, <b>Vastu / Feng Shui</b>, <b>low-budget</b> ideas and a <b>solar</b> summary based on your current project. Tap one of the one-click prompts below, or type a keyword.<div class="text-[11px] text-slate-500 mt-1">Note: I am a scripted assistant working from your project data, not a live AI model.</div>';
+    }
+
+    function botAdd(html, who) {
+        const box = $('bot-messages');
+        const d = document.createElement('div');
+        d.className = who === 'user' ? 'flex justify-end' : 'flex justify-start';
+        d.innerHTML = '<div class="max-w-[92%] px-3.5 py-2.5 rounded-2xl leading-relaxed ' + (who === 'user' ? 'bg-blueprint-500 text-slate-950 font-medium rounded-br-sm' : 'bg-slate-800/90 border border-slate-700 text-slate-200 rounded-bl-sm') + '">' + html + '</div>';
+        box.appendChild(d);
+        if (window.gsap) gsap.from(d, { opacity: 0, y: 10, duration: 0.3, ease: 'power2.out' });
+        box.scrollTop = box.scrollHeight;
+        return d;
+    }
+    function botAnswer(html) {
+        if (botBusy) return;
+        botBusy = true;
+        const typing = botAdd('<span class="typing-dot"></span> <span class="typing-dot"></span> <span class="typing-dot"></span>', 'bot');
+        setTimeout(() => { typing.remove(); botAdd(html, 'bot'); botBusy = false; sfx.toggle(); }, 750);
+    }
+    const BOT_LABELS = { daylight: 'Optimize floor plan for maximum natural daylight', vastu: 'Suggest Vastu / Feng Shui compliant room orientations', budget: 'Suggest low-budget structural modifications' };
+    function botPrompt(key) {
+        if (botBusy) return;
+        if (!rooms.length) initRooms();
+        botAdd(esc(BOT_LABELS[key]), 'user');
+        botAnswer(key === 'daylight' ? replyDaylight() : (key === 'vastu' ? replyVastu() : replyBudget()));
+    }
+    function botSend(e) {
+        e.preventDefault();
+        const inp = $('bot-input'), q = inp.value.trim();
+        if (!q || botBusy) return;
+        inp.value = '';
+        if (!rooms.length) initRooms();
+        botAdd(esc(q), 'user');
+        const l = q.toLowerCase();
+        let r;
+        if (/daylight|light|sun|window/.test(l)) r = replyDaylight();
+        else if (/vastu|feng|shui|direction|orient/.test(l)) r = replyVastu();
+        else if (/budget|cost|cheap|save|saving|low/.test(l)) r = replyBudget();
+        else if (/solar|energy|panel|power/.test(l)) r = replySolar();
+        else r = replyHelp();
+        botAnswer(r);
+    }
+    function toggleBot() {
+        botOpen = !botOpen;
+        const p = $('bot-panel');
+        p.classList.toggle('translate-x-full', !botOpen);
+        p.setAttribute('aria-hidden', String(!botOpen));
+        $('bot-fab').classList.toggle('hidden', botOpen && window.innerWidth < 640);
+        sfx.toggle();
+        if (botOpen && !botGreeted) {
+            botGreeted = true;
+            botAdd('Hi! I am <b>ArchiBot</b>. I read your plot, style, budget and current room layout to give design suggestions. Pick a prompt below to start.', 'bot');
+        }
+        if (botOpen) setTimeout(() => $('bot-input').focus(), 320);
+    }
+
+
+
+    // =====================================================
+    // LOGO + SPLASH + SIGN-IN GATE
+    // =====================================================
+    const SPLASH_MS = 5000;
+    let splashTimer = null, splashDone = false;
+
+    function logoMarkup(uid, animated) {
+        const d = (delay) => animated ? ' pathLength="1" style="animation-delay:' + delay + 's"' : '';
+        const cls = animated ? ' class="logo-draw"' : '';
+        return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="100%" height="100%"' + cls + '>' +
+            '<defs><linearGradient id="lgB' + uid + '" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7dd3fc"/><stop offset="1" stop-color="#0284c7"/></linearGradient>' +
+            '<linearGradient id="lgA' + uid + '" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fcd34d"/><stop offset="1" stop-color="#d97706"/></linearGradient></defs>' +
+            '<circle cx="60" cy="60" r="55" fill="#0b1324"/>' +
+            '<circle class="ld" cx="60" cy="60" r="54" fill="none" stroke="url(#lgB' + uid + ')" stroke-width="2.5"' + d(0) + '/>' +
+            '<circle cx="60" cy="60" r="46" fill="none" stroke="#38bdf8" stroke-opacity=".28" stroke-dasharray="2 5"/>' +
+            '<path d="M38 70 V94 H82 V70" fill="none" stroke="url(#lgB' + uid + ')" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"' + d(0.3) + '/>' +
+            '<path d="M55 94 V80 H65 V94" fill="none" stroke="#7dd3fc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"' + d(0.6) + '/>' +
+            '<path d="M60 24 L32 70 M60 24 L88 70" fill="none" stroke="url(#lgA' + uid + ')" stroke-width="3.5" stroke-linecap="round"' + d(0.5) + '/>' +
+            '<path d="M45 50 Q60 60 75 50" fill="none" stroke="#fbbf24" stroke-width="2" stroke-linecap="round"' + d(0.9) + '/>' +
+            '<g' + (animated ? ' class="logo-pop" style="transform-origin:60px 24px;transform-box:fill-box"' : '') + '><circle cx="60" cy="24" r="5" fill="#f59e0b"/><circle cx="60" cy="24" r="1.8" fill="#0b1324"/></g>' +
+            '</svg>';
+    }
+
+    function startSplash() {
+        try { if (sessionStorage.getItem('archi_gate_done') === '1') { splashDone = true; $('splash').classList.add('hidden'); return; } } catch (e) { /* ignore */ }
+        document.body.style.overflow = 'hidden';
+        $('splash-logo').innerHTML = logoMarkup('s', true);
+        $('gate-logo').innerHTML = logoMarkup('g', false);
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+            const bar = $('splash-bar');
+            bar.style.transition = 'width ' + SPLASH_MS + 'ms linear'; bar.style.width = '100%';
+        }));
+        const msgs = ['Initializing blueprint engine...', 'Loading spatial algorithms...', 'Calibrating 3D studio...', 'Preparing your workspace...'];
+        msgs.forEach((m, i) => setTimeout(() => { if (!splashDone) $('splash-status').innerText = m; }, i * (SPLASH_MS / msgs.length)));
+        splashTimer = setTimeout(endSplash, SPLASH_MS);
+    }
+    function endSplash() {
+        if (splashDone) return;
+        splashDone = true; clearTimeout(splashTimer);
+        const sp = $('splash');
+        sp.classList.add('fade-out');
+        const g = $('gate');
+        g.classList.remove('hidden'); g.classList.add('flex');
+        if (window.gsap) gsap.from(g.firstElementChild, { opacity: 0, y: 30, scale: 0.97, duration: 0.6, ease: 'power3.out', clearProps: 'all' });
+        setTimeout(() => sp.classList.add('hidden'), 650);
+    }
+    function gateSwitch(type) {
+        const login = type === 'login';
+        $('gate-tab-login').className = login ? 'flex-1 py-2 rounded-lg bg-blueprint-500 text-slate-950 font-bold' : 'flex-1 py-2 rounded-lg text-slate-400 hover:text-white';
+        $('gate-tab-register').className = login ? 'flex-1 py-2 rounded-lg text-slate-400 hover:text-white' : 'flex-1 py-2 rounded-lg bg-blueprint-500 text-slate-950 font-bold';
+        $('gate-name-wrap').classList.toggle('hidden', login);
+        $('gate-submit').innerText = login ? 'Sign In to Studio' : 'Create Architect Account';
+    }
+    function gateSubmit(e) {
+        e.preventDefault();
+        const email = $('gate-email').value, name = $('gate-name').value || 'Architect User';
+        appState.user = { name, email };
+        $('user-name-display').innerText = name.split(' ')[0];
+        $('user-avatar-icon').innerHTML = '<i class="fa-solid fa-user-check text-emerald-400"></i>';
+        enterSite();
+    }
+    function enterSite() {
+        try { sessionStorage.setItem('archi_gate_done', '1'); } catch (e) { /* ignore */ }
+        const g = $('gate');
+        g.classList.add('hidden'); g.classList.remove('flex');
+        document.body.style.overflow = '';
+        sfx.toggle();
+        navigateTo('home');
+    }
+
+    // =====================================================
+    // INIT
+    // =====================================================
+    document.addEventListener('DOMContentLoaded', () => {
+        initRooms();
+        buildPalettes();
+        updateLayerButtons();
+        updateInspector();
+
+        const form = $('requirements-form');
+        form.addEventListener('input', readWizard);
+        form.addEventListener('change', readWizard);
+
+        const cv = $('blueprint-canvas');
+        cv.addEventListener('pointerdown', onCanvasDown);
+        cv.addEventListener('pointermove', onCanvasMove);
+        cv.addEventListener('pointerup', onCanvasUp);
+        cv.addEventListener('pointercancel', onCanvasUp);
+
+        const close = (e) => { if (e.key === 'Escape') { closeAuthModal(); closeComparisonModal(); if (botOpen) toggleBot(); } };
+        document.addEventListener('keydown', close);
+
+        navigateTo('home');
+        startSplash();
+    });
+    </script>
+</body>
+</html>
